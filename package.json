@@ -12,6 +12,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

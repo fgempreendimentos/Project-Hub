@@ -17,3 +17,5 @@ app.listen(env.port, () => {
 container.whatsappConnection.start().catch((error) => {
   logger.error(`Falha ao iniciar conexão com o WhatsApp: ${error}`);
 });
+
+container.startScheduler();
