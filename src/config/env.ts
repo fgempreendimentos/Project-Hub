@@ -14,6 +14,7 @@ export const env = {
   nodeEnv: required('NODE_ENV', 'development'),
   port: Number(required('PORT', '3000')),
   logLevel: required('LOG_LEVEL', 'info'),
+  logsDir: required('LOGS_DIR', './src/logs'),
   publicBaseUrl: required('PUBLIC_BASE_URL', 'http://localhost:3000'),
   dashboard: {
     user: required('DASHBOARD_USER', ''),

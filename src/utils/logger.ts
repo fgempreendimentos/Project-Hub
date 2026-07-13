@@ -1,9 +1,11 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import winston from 'winston';
 
 import { env } from '../config/env';
 
-const logsDir = path.join(__dirname, '..', 'logs');
+const logsDir = path.resolve(env.logsDir);
+fs.mkdirSync(logsDir, { recursive: true });
 
 export const logger = winston.createLogger({
   level: env.logLevel,
