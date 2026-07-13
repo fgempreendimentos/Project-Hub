@@ -144,8 +144,9 @@ vite.config.ts.timestamp-*
 # SQLite database
 *.db
 *.db-journal
-src/database/generated/
 
 # WhatsApp session (Baileys auth state) — never commit credentials
 auth/
 baileys_auth/
+
+/src/generated/prisma
