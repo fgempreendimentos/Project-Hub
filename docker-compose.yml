@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: file:/app/data/db/app.db
+      WHATSAPP_AUTH_DIR: /app/data/whatsapp-auth
+      LOGS_DIR: /app/data/logs
+    volumes:
+      - ./data/db:/app/data/db
+      - ./data/whatsapp-auth:/app/data/whatsapp-auth
+      - ./data/logs:/app/data/logs

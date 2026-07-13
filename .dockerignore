@@ -1,0 +1,13 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+auth
+baileys_auth
+src/database/*.db
+src/database/*.db-journal
+src/logs/*.log
+.git
+.gitignore
+*.md
