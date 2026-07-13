@@ -1,5 +1,4 @@
-# Logs
-logs
+# Logs (src/logs/ itself is tracked via .gitkeep; only files inside are ignored)
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -141,3 +140,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# SQLite database
+*.db
+*.db-journal
+src/database/generated/
+
+# WhatsApp session (Baileys auth state) — never commit credentials
+auth/
+baileys_auth/
