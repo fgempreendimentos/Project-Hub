@@ -14,4 +14,9 @@ export const env = {
   nodeEnv: required('NODE_ENV', 'development'),
   port: Number(required('PORT', '3000')),
   logLevel: required('LOG_LEVEL', 'info'),
+  whatsapp: {
+    authDir: required('WHATSAPP_AUTH_DIR', './auth'),
+    groupId: required('WHATSAPP_GROUP_ID', ''),
+    minIntervalMs: Number(required('WHATSAPP_MIN_INTERVAL_MS', '20000')),
+  },
 };
