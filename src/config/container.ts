@@ -1,3 +1,5 @@
+import OpenAI from 'openai';
+
 import { buildRouter } from '../api/router';
 import { WhatsappConnection } from '../bot/whatsapp/connection';
 import { WhatsappPublisher } from '../bot/whatsapp/whatsapp-publisher';
@@ -21,6 +23,7 @@ import { MercadoLivreLinkConverter } from '../services/affiliate/mercadolivre-li
 import { ShopeeLinkConverter } from '../services/affiliate/shopee-link.converter';
 import { OfferPipelineService } from '../services/offer-pipeline.service';
 import { StatsService } from '../services/stats.service';
+import { OpenAiTextGenerator } from '../services/text/openai-text-generator';
 import { TemplateTextGenerator } from '../services/text/template-text-generator';
 import { AvailabilityValidator } from '../services/validation/availability.validator';
 import { DiscountThresholdValidator } from '../services/validation/discount-threshold.validator';
@@ -76,8 +79,16 @@ const affiliateLinkService = new AffiliateLinkService([
   new ShopeeLinkConverter(env.affiliate.shopee),
 ]);
 
-// --- Texto (template fixo por enquanto; IA real entra na Etapa 8) ---
-const textGenerator = new TemplateTextGenerator();
+// --- Texto: template fixo, ou IA (headline apenas) com fallback para o
+// template caso a chamada à OpenAI falhe. Sem OPENAI_KEY, usa só o template.
+const templateTextGenerator = new TemplateTextGenerator();
+const textGenerator = env.openai.apiKey
+  ? new OpenAiTextGenerator(
+      new OpenAI({ apiKey: env.openai.apiKey }),
+      env.openai.model,
+      templateTextGenerator,
+    )
+  : templateTextGenerator;
 
 // --- Estatísticas / Dashboard ---
 const statsService = new StatsService(statsRepository);

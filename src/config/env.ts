@@ -29,6 +29,10 @@ export const env = {
     shopee: required('AFFILIATE_SHOPEE', ''),
     mercadolivre: required('AFFILIATE_MERCADOLIVRE', ''),
   },
+  openai: {
+    apiKey: required('OPENAI_KEY', ''),
+    model: required('OPENAI_MODEL', 'gpt-4o-mini'),
+  },
   validation: {
     minDiscountPercent: Number(required('MIN_DISCOUNT_PERCENT', '20')),
     minRating: Number(required('MIN_RATING', '4')),
