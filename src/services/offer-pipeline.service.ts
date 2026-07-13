@@ -1,3 +1,4 @@
+import { env } from '../config/env';
 import { HistoryRepository } from '../database/repositories/history.repository';
 import { LogRepository } from '../database/repositories/log.repository';
 import { MessageRepository } from '../database/repositories/message.repository';
@@ -130,13 +131,18 @@ export class OfferPipelineService {
 
       await this.historyRepository.create(product.id, rawOffer.offerPrice, rawOffer.shippingCost);
 
+      // O texto leva o link de rastreio (não o link de afiliado direto), para
+      // que o clique passe pelo endpoint /r/:offerId e alimente a métrica de
+      // "clique por afiliado" do dashboard antes de redirecionar à loja real.
+      const trackedUrl = `${env.publicBaseUrl}/r/${offer.id}`;
+
       const content = await this.textGenerator.generate({
         title: rawOffer.title,
         originalPrice: rawOffer.originalPrice,
         offerPrice: rawOffer.offerPrice,
         discountPercent: rawOffer.discountPercent,
         rating: rawOffer.rating,
-        affiliateUrl,
+        affiliateUrl: trackedUrl,
       });
 
       let sentToAny = false;

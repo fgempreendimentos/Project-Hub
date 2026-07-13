@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard — Sistema de Ofertas</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb;
+    --page-plane: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --gridline: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.1);
+    --series-1: #2a78d6; /* blue — mercadolivre / sequencial */
+    --series-2: #1baf7a; /* aqua — promobit */
+    --series-3: #eda100; /* yellow — pelando */
+    --series-8: #eb6834; /* orange — amazon */
+    --series-7: #e87ba4; /* magenta — shopee */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1: #1a1a19;
+      --page-plane: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted: #898781;
+      --gridline: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255, 255, 255, 0.1);
+      --series-1: #3987e5;
+      --series-2: #199e70;
+      --series-3: #c98500;
+      --series-8: #d95926;
+      --series-7: #d55181;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  header {
+    padding: 24px 32px 8px;
+  }
+  header h1 { font-size: 20px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+
+  main { padding: 8px 32px 40px; max-width: 1100px; margin: 0 auto; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 16px 0 24px;
+  }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat-tile .label { font-size: 12px; color: var(--text-secondary); }
+  .stat-tile .value { font-size: 26px; font-weight: 600; margin-top: 4px; }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px 20px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .card h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-primary); }
+
+  .filters { display: flex; gap: 6px; margin-bottom: 10px; }
+  .filters button {
+    font: inherit;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .filters button[aria-pressed="true"] {
+    background: var(--series-1);
+    border-color: var(--series-1);
+    color: #ffffff;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .two-col { grid-template-columns: 1fr; } }
+
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .axis-label { fill: var(--text-muted); font-size: 10px; }
+  .gridline { stroke: var(--gridline); stroke-width: 1; }
+  .baseline { stroke: var(--baseline); stroke-width: 1; }
+  .bar-label { fill: var(--text-secondary); font-size: 11px; }
+  .value-label { fill: var(--text-primary); font-size: 11px; font-weight: 600; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--text-primary);
+    color: var(--surface-1);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.08s;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  details { margin-top: 8px; }
+  summary { font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-muted); font-weight: 500; }
+
+  .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sistema de Ofertas — Dashboard</h1>
+  <p>Ofertas encontradas, enviadas e rejeitadas, saúde das fontes e cliques de afiliado.</p>
+</header>
+
+<main>
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div class="card">
+    <h2>Ofertas enviadas ao longo do tempo</h2>
+    <div class="filters" role="group" aria-label="Período">
+      <button data-granularity="daily" aria-pressed="true">Diário</button>
+      <button data-granularity="weekly" aria-pressed="false">Semanal</button>
+      <button data-granularity="monthly" aria-pressed="false">Mensal</button>
+    </div>
+    <div id="trend-chart"></div>
+    <details>
+      <summary>Ver como tabela</summary>
+      <table id="trend-table"><thead><tr><th>Período</th><th>Ofertas enviadas</th></tr></thead><tbody></tbody></table>
+    </details>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h2>Cliques por afiliado</h2>
+      <div id="clicks-chart"></div>
+      <details>
+        <summary>Ver como tabela</summary>
+        <table id="clicks-table"><thead><tr><th>Fonte</th><th>Cliques</th></tr></thead><tbody></tbody></table>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Produtos mais enviados</h2>
+      <div id="products-chart"></div>
+      <details>
+        <summary>Ver como tabela</summary>
+        <table id="products-table"><thead><tr><th>Produto</th><th>Envios</th></tr></thead><tbody></tbody></table>
+      </details>
+    </div>
+  </div>
+</main>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  const tooltip = document.getElementById('tooltip');
+
+  function showTooltip(x, y, text) {
+    tooltip.textContent = text;
+    tooltip.style.left = `${x + 12}px`;
+    tooltip.style.top = `${y + 12}px`;
+    tooltip.style.opacity = '1';
+  }
+  function hideTooltip() {
+    tooltip.style.opacity = '0';
+  }
+
+  function niceMax(value) {
+    if (value <= 0) return 4;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+    const normalized = value / magnitude;
+    const steps = [1, 2, 2.5, 5, 10];
+    const step = steps.find((s) => s >= normalized) ?? 10;
+    return step * magnitude;
+  }
+
+  function formatPeriodLabel(label, granularity) {
+    const [year, month, day] = label.split('-');
+    if (granularity === 'monthly') {
+      const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      return `${months[Number(month) - 1]}/${year.slice(2)}`;
+    }
+    return `${day}/${month}`;
+  }
+
+  function renderLineChart(container, data, granularity) {
+    container.innerHTML = '';
+    if (data.every((d) => d.count === 0)) {
+      container.innerHTML = '<p class="empty">Sem envios no período selecionado ainda.</p>';
+      return;
+    }
+
+    const width = 800;
+    const height = 220;
+    const padding = { top: 12, right: 16, bottom: 24, left: 32 };
+    const innerW = width - padding.left - padding.right;
+    const innerH = height - padding.top - padding.bottom;
+    const max = niceMax(Math.max(...data.map((d) => d.count)));
+
+    const x = (i) => padding.left + (innerW * i) / Math.max(data.length - 1, 1);
+    const y = (v) => padding.top + innerH - (innerH * v) / max;
+
+    const gridSteps = 4;
+    let gridlines = '';
+    for (let i = 0; i <= gridSteps; i++) {
+      const value = (max / gridSteps) * i;
+      const gy = y(value);
+      gridlines += `<line class="gridline" x1="${padding.left}" x2="${width - padding.right}" y1="${gy}" y2="${gy}" />`;
+      gridlines += `<text class="axis-label" x="0" y="${gy + 3}">${Math.round(value)}</text>`;
+    }
+
+    const points = data.map((d, i) => [x(i), y(d.count)]);
+    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ');
+    const areaPath = `${linePath} L ${points[points.length - 1][0]} ${y(0)} L ${points[0][0]} ${y(0)} Z`;
+
+    const last = data[data.length - 1];
+    const lastPoint = points[points.length - 1];
+
+    const labelEvery = Math.ceil(data.length / 8);
+    let xLabels = '';
+    let lastLabelIndex = -Infinity;
+    data.forEach((d, i) => {
+      const isForcedLast = i === data.length - 1;
+      const dueByStep = i % labelEvery === 0;
+      const tooCloseToPrevious = i - lastLabelIndex < labelEvery;
+      if ((dueByStep && !tooCloseToPrevious) || (isForcedLast && !tooCloseToPrevious)) {
+        xLabels += `<text class="axis-label" text-anchor="middle" x="${x(i)}" y="${height - 4}">${formatPeriodLabel(d.label, granularity)}</text>`;
+        lastLabelIndex = i;
+      }
+    });
+
+    let hitAreas = '';
+    points.forEach((p, i) => {
+      hitAreas += `<rect class="hit" data-i="${i}" x="${p[0] - innerW / data.length / 2}" y="${padding.top}" width="${innerW / data.length}" height="${innerH}" fill="transparent" />`;
+    });
+
+    container.innerHTML = `
+      <svg viewBox="0 0 ${width} ${height}">
+        ${gridlines}
+        <line class="baseline" x1="${padding.left}" x2="${width - padding.right}" y1="${y(0)}" y2="${y(0)}" />
+        <path d="${areaPath}" fill="var(--series-1)" opacity="0.1" stroke="none" />
+        <path d="${linePath}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        <circle cx="${lastPoint[0]}" cy="${lastPoint[1]}" r="4.5" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2" />
+        <text class="value-label" x="${lastPoint[0]}" y="${lastPoint[1] - 10}" text-anchor="end">${last.count}</text>
+        ${xLabels}
+        ${hitAreas}
+      </svg>`;
+
+    const svg = container.querySelector('svg');
+    svg.querySelectorAll('.hit').forEach((hit) => {
+      hit.addEventListener('mousemove', (event) => {
+        const i = Number(hit.dataset.i);
+        const d = data[i];
+        showTooltip(event.clientX, event.clientY, `${formatPeriodLabel(d.label, granularity)}: ${d.count} ofertas`);
+      });
+      hit.addEventListener('mouseleave', hideTooltip);
+    });
+  }
+
+  function renderHorizontalBarChart(container, data, colorFor, valueKey, labelKey) {
+    container.innerHTML = '';
+    if (data.length === 0) {
+      container.innerHTML = '<p class="empty">Sem dados ainda.</p>';
+      return;
+    }
+
+    const width = 500;
+    const barHeight = 20;
+    const gap = 10;
+    const rowHeight = barHeight + gap;
+    const height = data.length * rowHeight + 10;
+    const labelWidth = 170;
+    const maxBarWidth = width - labelWidth - 50;
+    const max = Math.max(...data.map((d) => d[valueKey]));
+
+    let bars = '';
+    data.forEach((d, i) => {
+      const y = i * rowHeight + 6;
+      const barW = max > 0 ? Math.max((maxBarWidth * d[valueKey]) / max, 3) : 3;
+      const label = String(d[labelKey]).length > 24 ? `${String(d[labelKey]).slice(0, 23)}…` : d[labelKey];
+      bars += `
+        <text class="bar-label" x="${labelWidth - 8}" y="${y + barHeight / 2 + 4}" text-anchor="end">${label}</text>
+        <rect class="bar" data-i="${i}" x="${labelWidth}" y="${y}" width="${barW}" height="${barHeight}" rx="4" fill="${colorFor(d, i)}" />
+        <text class="value-label" x="${labelWidth + barW + 8}" y="${y + barHeight / 2 + 4}">${d[valueKey]}</text>`;
+    });
+
+    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}">${bars}</svg>`;
+
+    const svg = container.querySelector('svg');
+    svg.querySelectorAll('.bar').forEach((bar) => {
+      bar.addEventListener('mousemove', (event) => {
+        const i = Number(bar.dataset.i);
+        const d = data[i];
+        showTooltip(event.clientX, event.clientY, `${d[labelKey]}: ${d[valueKey]}`);
+      });
+      bar.addEventListener('mouseleave', hideTooltip);
+    });
+  }
+
+  const SOURCE_COLORS = {
+    'Mercado Livre': 'var(--series-1)',
+    'Amazon Brasil': 'var(--series-8)',
+    Shopee: 'var(--series-7)',
+    Pelando: 'var(--series-3)',
+    Promobit: 'var(--series-2)',
+  };
+
+  async function fetchJSON(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Falha ao buscar ${url}: ${res.status}`);
+    return res.json();
+  }
+
+  function renderKpis(overview) {
+    const tiles = [
+      ['Ofertas encontradas', overview.totalOffers],
+      ['Ofertas enviadas', overview.sentOffers],
+      ['Ofertas rejeitadas', overview.rejectedOffers],
+      ['Erros registrados', overview.errors],
+      ['Fontes online', overview.sourcesOnline],
+      ['Fontes offline', overview.sourcesOffline],
+    ];
+    document.getElementById('kpi-grid').innerHTML = tiles
+      .map(([label, value]) => `<div class="stat-tile"><div class="label">${label}</div><div class="value">${value}</div></div>`)
+      .join('');
+  }
+
+  function fillTable(tableId, rows) {
+    const tbody = document.querySelector(`#${tableId} tbody`);
+    tbody.innerHTML = rows.map((r) => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  }
+
+  async function loadTrend(granularity) {
+    const data = await fetchJSON(`/api/stats/timeseries?granularity=${granularity}`);
+    renderLineChart(document.getElementById('trend-chart'), data, granularity);
+    fillTable('trend-table', data.map((d) => [formatPeriodLabel(d.label, granularity), d.count]));
+  }
+
+  async function loadAll() {
+    const [overview, clicks, products] = await Promise.all([
+      fetchJSON('/api/stats/overview'),
+      fetchJSON('/api/stats/clicks-by-affiliate'),
+      fetchJSON('/api/stats/top-products?limit=8'),
+    ]);
+
+    renderKpis(overview);
+
+    renderHorizontalBarChart(
+      document.getElementById('clicks-chart'),
+      clicks,
+      (d) => SOURCE_COLORS[d.source] ?? 'var(--series-1)',
+      'clicks',
+      'source',
+    );
+    fillTable('clicks-table', clicks.map((d) => [d.source, d.clicks]));
+
+    renderHorizontalBarChart(
+      document.getElementById('products-chart'),
+      products,
+      () => 'var(--series-1)',
+      'sentCount',
+      'title',
+    );
+    fillTable('products-table', products.map((d) => [d.title, d.sentCount]));
+
+    await loadTrend('daily');
+  }
+
+  document.querySelectorAll('.filters button').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.filters button').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      button.setAttribute('aria-pressed', 'true');
+      loadTrend(button.dataset.granularity);
+    });
+  });
+
+  loadAll().catch((error) => {
+    document.querySelector('main').innerHTML = `<p class="empty">Erro ao carregar dashboard: ${error.message}</p>`;
+  });
+</script>
+</body>
+</html>

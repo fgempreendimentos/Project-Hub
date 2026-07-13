@@ -22,6 +22,10 @@ export class OfferRepository {
       .then((offer) => offer !== null);
   }
 
+  findById(offerId: string) {
+    return this.prisma.offer.findUnique({ where: { id: offerId } });
+  }
+
   create(input: CreateOfferInput) {
     return this.prisma.offer.create({ data: input });
   }

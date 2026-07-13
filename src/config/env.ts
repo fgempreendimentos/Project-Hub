@@ -14,6 +14,11 @@ export const env = {
   nodeEnv: required('NODE_ENV', 'development'),
   port: Number(required('PORT', '3000')),
   logLevel: required('LOG_LEVEL', 'info'),
+  publicBaseUrl: required('PUBLIC_BASE_URL', 'http://localhost:3000'),
+  dashboard: {
+    user: required('DASHBOARD_USER', ''),
+    password: required('DASHBOARD_PASSWORD', ''),
+  },
   whatsapp: {
     authDir: required('WHATSAPP_AUTH_DIR', './auth'),
     groupId: required('WHATSAPP_GROUP_ID', ''),

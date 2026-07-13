@@ -1,12 +1,15 @@
+import { buildRouter } from '../api/router';
 import { WhatsappConnection } from '../bot/whatsapp/connection';
 import { WhatsappPublisher } from '../bot/whatsapp/whatsapp-publisher';
 import { prisma } from '../database/client';
+import { ClickRepository } from '../database/repositories/click.repository';
 import { HistoryRepository } from '../database/repositories/history.repository';
 import { LogRepository } from '../database/repositories/log.repository';
 import { MessageRepository } from '../database/repositories/message.repository';
 import { OfferRepository } from '../database/repositories/offer.repository';
 import { ProductRepository } from '../database/repositories/product.repository';
 import { SourceRepository } from '../database/repositories/source.repository';
+import { StatsRepository } from '../database/repositories/stats.repository';
 import { AmazonAdapter } from '../scrapers/amazon/amazon.adapter';
 import { MercadoLivreAdapter } from '../scrapers/mercadolivre/mercadolivre.adapter';
 import { PelandoAdapter } from '../scrapers/pelando/pelando.adapter';
@@ -17,6 +20,7 @@ import { AmazonLinkConverter } from '../services/affiliate/amazon-link.converter
 import { MercadoLivreLinkConverter } from '../services/affiliate/mercadolivre-link.converter';
 import { ShopeeLinkConverter } from '../services/affiliate/shopee-link.converter';
 import { OfferPipelineService } from '../services/offer-pipeline.service';
+import { StatsService } from '../services/stats.service';
 import { TemplateTextGenerator } from '../services/text/template-text-generator';
 import { AvailabilityValidator } from '../services/validation/availability.validator';
 import { DiscountThresholdValidator } from '../services/validation/discount-threshold.validator';
@@ -49,6 +53,8 @@ const offerRepository = new OfferRepository(prisma);
 const historyRepository = new HistoryRepository(prisma);
 const messageRepository = new MessageRepository(prisma);
 const logRepository = new LogRepository(prisma);
+const clickRepository = new ClickRepository(prisma);
+const statsRepository = new StatsRepository(prisma);
 
 // --- Validação (mesma cadeia para todas as fontes) ---
 const validatorChain = new ValidatorChain([
@@ -72,6 +78,10 @@ const affiliateLinkService = new AffiliateLinkService([
 
 // --- Texto (template fixo por enquanto; IA real entra na Etapa 8) ---
 const textGenerator = new TemplateTextGenerator();
+
+// --- Estatísticas / Dashboard ---
+const statsService = new StatsService(statsRepository);
+const apiRouter = buildRouter({ statsService, offerRepository, clickRepository });
 
 // --- Pipelines, um por fonte ---
 function buildPipeline(adapter: SourceAdapter) {
@@ -115,4 +125,5 @@ export const container = {
   pipelines,
   scheduler,
   startScheduler,
+  apiRouter,
 };

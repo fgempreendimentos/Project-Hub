@@ -10,6 +10,8 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use(container.apiRouter);
+
 app.listen(env.port, () => {
   logger.info(`Server listening on port ${env.port}`);
 });
