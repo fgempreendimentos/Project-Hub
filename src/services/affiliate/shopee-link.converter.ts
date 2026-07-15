@@ -1,27 +1,32 @@
 import type { AffiliateLinkConverter } from '../../types/affiliate-link-converter';
 
 /**
- * Shopee Afiliados normalmente NÃO funciona por query param simples como
- * Amazon/Mercado Livre — os links de afiliado costumam ser gerados pelo
- * painel/API do próprio programa (Shopee Affiliate/Involve Asia), resultando
- * em uma URL de rastreio totalmente diferente da URL do produto.
+ * CONFIRMADO (comparando dois links reais gerados pelo painel Shopee
+ * Afiliados): a Shopee NÃO usa um parâmetro de rastreio visível como
+ * `?af_id=` — os links de afiliado são short-links opacos
+ * (`s.shopee.com.br/<código>`) onde a associação com a conta de afiliado
+ * fica guardada do lado da Shopee, embutida no próprio código curto, gerado
+ * individualmente por produto através da ferramenta/API deles.
  *
- * Esta implementação usa um query param como placeholder e PRECISA ser
- * validada/ajustada contra o painel real do seu programa de afiliado Shopee
- * antes de operar em produção — sinalizado aqui e no checklist de validação
- * final combinado com você.
+ * Por isso `matches()` retorna sempre `false` por enquanto: um `convert()`
+ * que apenas grudasse um parâmetro na URL geraria um link que PARECE de
+ * afiliado mas não seria reconhecido pela Shopee — a oferta seria publicada,
+ * cliques e vendas aconteceriam, mas sem crédito de comissão. Rejeitar a
+ * oferta (`AffiliateLinkService` retorna null e o pipeline marca
+ * "sem programa de afiliado") é o comportamento seguro até existir uma
+ * integração real (ex.: chamar a API de geração de links da Shopee
+ * Afiliados por produto, se ela existir e formos aprovados para usá-la).
  */
 export class ShopeeLinkConverter implements AffiliateLinkConverter {
   readonly platform = 'shopee';
 
   constructor(private readonly affiliateId: string) {}
 
-  matches(url: string): boolean {
-    return /shopee\.com\.br|shp\.ee/i.test(url);
+  matches(_url: string): boolean {
+    return false;
   }
 
   convert(url: string): string {
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}af_id=${this.affiliateId}`;
+    return url;
   }
 }
