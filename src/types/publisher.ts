@@ -1,7 +1,9 @@
 export type OutgoingMessage = {
   offerId: string;
   content: string;
+  title?: string;
   imageUrl?: string;
+  sourceUrl?: string;
 };
 
 export type PublisherChannel = 'whatsapp' | 'telegram' | 'discord';

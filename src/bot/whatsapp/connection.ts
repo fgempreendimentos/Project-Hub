@@ -35,6 +35,14 @@ export class WhatsappConnection {
     this.socket = socket;
 
     socket.ev.on('creds.update', saveCreds);
+    socket.ev.on('messages.upsert', ({ messages }) => {
+      for (const message of messages) {
+        const jid = message.key.remoteJid;
+        if (jid?.endsWith('@g.us')) {
+          logger.info(`Mensagem recebida do grupo "${jid}" (use este valor em WHATSAPP_GROUP_ID)`);
+        }
+      }
+    });
     socket.ev.on('connection.update', (update) => {
       const { connection, lastDisconnect, qr } = update;
 

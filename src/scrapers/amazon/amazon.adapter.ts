@@ -21,11 +21,13 @@ type ScrapedCard = {
 };
 
 /**
- * Amazon usa proteção anti-bot agressiva e muda o HTML das páginas de ofertas
- * com frequência — os seletores abaixo são um ponto de partida razoável
- * (baseado na estrutura típica de cards de oferta), mas NÃO foram validados
- * ao vivo nesta sessão (rede bloqueada no ambiente de desenvolvimento).
- * Checagem final combinada para antes do deploy.
+ * Validado ao vivo em 2026-07-14: a página de ofertas usa
+ * `[data-testid="product-card"]` com `data-asin` direto no elemento (sem
+ * precisar extrair da URL). Amazon não expõe rating/nº de avaliações nesta
+ * grade de ofertas — os validadores correspondentes tratam a ausência como
+ * "não se aplica". Classes CSS com hash (`ProductCard-module__*`) mudam a
+ * cada deploy da Amazon, por isso os seletores usam apenas `data-testid`,
+ * `data-asin` e o id estável `title-{ASIN}`.
  */
 export class AmazonAdapter implements SourceAdapter {
   readonly sourceSlug = 'amazon';
@@ -37,20 +39,26 @@ export class AmazonAdapter implements SourceAdapter {
       const page = await browser.newPage({ userAgent: USER_AGENT });
       await page.goto(DEALS_URL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       await page
-        .waitForSelector('[data-testid="deal-card"]', { timeout: 15_000 })
+        .waitForSelector('[data-testid="product-card"]', { timeout: 15_000 })
         .catch(() => null);
 
-      const cards = await page.$$eval('[data-testid="deal-card"]', (elements) =>
+      const cards = await page.$$eval('[data-testid="product-card"]', (elements) =>
         elements.map((el) => {
-          const link = el.querySelector<HTMLAnchorElement>('a[href*="/dp/"]');
-          const asinMatch = link?.href.match(/\/dp\/([A-Z0-9]{10})/);
+          const asin = el.getAttribute('data-asin');
+          const link = el.querySelector<HTMLAnchorElement>('a[data-testid="product-card-link"]');
           return {
-            externalId: asinMatch?.[1] ?? null,
-            title: el.querySelector('[data-testid="deal-title"]')?.textContent?.trim() ?? null,
+            externalId: asin,
+            title:
+              (asin && el.querySelector(`#title-${asin} .a-truncate-full`)?.textContent?.trim()) ??
+              null,
             url: link?.href ?? null,
             imageUrl: el.querySelector('img')?.getAttribute('src') ?? null,
-            originalPriceText: el.querySelector('.a-text-price .a-offscreen')?.textContent ?? null,
-            offerPriceText: el.querySelector('.a-price .a-offscreen')?.textContent ?? null,
+            originalPriceText:
+              el.querySelector('[data-testid="price-section"] .a-text-price .a-offscreen')
+                ?.textContent ?? null,
+            offerPriceText:
+              el.querySelector('[data-testid="price-section"] .a-price .a-offscreen')
+                ?.textContent ?? null,
             ratingText:
               el.querySelector('[aria-label*="de 5 estrelas"]')?.getAttribute('aria-label') ?? null,
             reviewsCountText: el.querySelector('.a-size-small .a-link-normal')?.textContent ?? null,

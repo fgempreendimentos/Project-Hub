@@ -148,5 +148,9 @@ vite.config.ts.timestamp-*
 # WhatsApp session (Baileys auth state) — never commit credentials
 auth/
 baileys_auth/
+data/whatsapp-auth/
+
+# Runtime data volumes (db, logs, whatsapp session) mounted in production
+data/
 
 /src/generated/prisma

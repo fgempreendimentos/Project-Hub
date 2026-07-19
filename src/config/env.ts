@@ -29,6 +29,7 @@ export const env = {
     amazon: required('AFFILIATE_AMAZON', ''),
     shopee: required('AFFILIATE_SHOPEE', ''),
     mercadolivre: required('AFFILIATE_MERCADOLIVRE', ''),
+    mercadolivreTool: required('AFFILIATE_MERCADOLIVRE_TOOL', ''),
   },
   openai: {
     apiKey: required('OPENAI_KEY', ''),

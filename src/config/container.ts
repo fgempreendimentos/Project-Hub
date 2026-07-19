@@ -20,7 +20,6 @@ import { ShopeeAdapter } from '../scrapers/shopee/shopee.adapter';
 import { AffiliateLinkService } from '../services/affiliate/affiliate-link.service';
 import { AmazonLinkConverter } from '../services/affiliate/amazon-link.converter';
 import { MercadoLivreLinkConverter } from '../services/affiliate/mercadolivre-link.converter';
-import { ShopeeLinkConverter } from '../services/affiliate/shopee-link.converter';
 import { OfferPipelineService } from '../services/offer-pipeline.service';
 import { StatsService } from '../services/stats.service';
 import { OpenAiTextGenerator } from '../services/text/openai-text-generator';
@@ -73,10 +72,17 @@ const validatorChain = new ValidatorChain([
 ]);
 
 // --- Afiliados (resolvidos pelo domínio de destino, não pela fonte) ---
+// Shopee fora da lista (verificado ao vivo em 2026-07-14): o programa de
+// afiliado da Shopee gera um link curto próprio por produto (s.shopee.com.br/…)
+// via painel web, não um query param fixo como Amazon/ML — sem acesso à API
+// do Shopee Affiliate Open Platform (App ID + Secret) não dá pra gerar isso
+// programaticamente. Ofertas com destino Shopee (via Pelando/Promobit) caem
+// em "sem programa de afiliado configurado" e são rejeitadas — não publica
+// link sem rastreio de comissão. Reativar exigiria implementar a chamada
+// assinada à API do Open Platform em ShopeeLinkConverter.
 const affiliateLinkService = new AffiliateLinkService([
   new AmazonLinkConverter(env.affiliate.amazon),
-  new MercadoLivreLinkConverter(env.affiliate.mercadolivre),
-  new ShopeeLinkConverter(env.affiliate.shopee),
+  new MercadoLivreLinkConverter(env.affiliate.mercadolivre, env.affiliate.mercadolivreTool),
 ]);
 
 // --- Texto: template fixo, ou IA (headline apenas) com fallback para o
@@ -89,10 +95,6 @@ const textGenerator = env.openai.apiKey
       templateTextGenerator,
     )
   : templateTextGenerator;
-
-// --- Estatísticas / Dashboard ---
-const statsService = new StatsService(statsRepository);
-const apiRouter = buildRouter({ statsService, offerRepository, clickRepository });
 
 // --- Pipelines, um por fonte ---
 function buildPipeline(adapter: SourceAdapter) {
@@ -119,15 +121,47 @@ const pipelines = {
   promobit: buildPipeline(new PromobitAdapter()),
 };
 
+// --- Estatísticas / Dashboard ---
+// Entrada manual de ofertas do Mercado Livre reaproveita o pipeline dessa
+// fonte (mesma validação/afiliado/texto/envio) — necessário porque a API de
+// busca deles está bloqueada (ver comentário em startScheduler abaixo).
+const statsService = new StatsService(statsRepository);
+const apiRouter = buildRouter({
+  statsService,
+  offerRepository,
+  clickRepository,
+  manualOfferPipeline: pipelines.mercadolivre,
+});
+
 // --- Scheduler ---
 const scheduler = new Scheduler();
 
 function startScheduler(): void {
+  // Escopo reduzido a pedido do usuário (2026-07-14): só Amazon, Mercado
+  // Livre e Shopee ficam agendados; Pelando e Promobit saem por ora (fácil
+  // reverter — basta descomentar as duas linhas no fim desta função).
+  //
+  // Mercado Livre e Shopee continuam sem produzir ofertas de verdade: ambos
+  // batem em paredes reais confirmadas ao vivo em 2026-07-14, não em
+  // bot-detection contornável.
+  // - Mercado Livre: `/sites/{site}/search`, `/sites/{site}` e
+  //   `/highlights/...` retornam 403 `PA_UNAUTHORIZED_RESULT_FROM_POLICIES`
+  //   mesmo com token OAuth client_credentials válido (confirmado com app
+  //   própria — `/users/me` funciona com o mesmo token, então não é
+  //   problema de autenticação, é política de acesso por aplicação). A
+  //   página pública de listagem redireciona para
+  //   `mercadolivre.com.br/captcha/wall`. Reativar de verdade exige a ML
+  //   aprovar acesso elevado para a aplicação (fora do código) —
+  //   credenciais já salvas em `.env` (MERCADOLIVRE_CLIENT_ID/SECRET) para
+  //   quando isso acontecer.
+  // - Shopee: toda página de produto (busca, categoria, flash sale) exige
+  //   login. Reativar de verdade exigiria uma sessão logada persistida
+  //   (conta dedicada).
   scheduler.schedule('mercadolivre', env.schedule.mercadolivreMinutes, pipelines.mercadolivre);
   scheduler.schedule('amazon', env.schedule.amazonMinutes, pipelines.amazon);
   scheduler.schedule('shopee', env.schedule.shopeeMinutes, pipelines.shopee);
-  scheduler.schedule('pelando', env.schedule.pelandoMinutes, pipelines.pelando);
-  scheduler.schedule('promobit', env.schedule.promobitMinutes, pipelines.promobit);
+  // scheduler.schedule('pelando', env.schedule.pelandoMinutes, pipelines.pelando);
+  // scheduler.schedule('promobit', env.schedule.promobitMinutes, pipelines.promobit);
 }
 
 export const container = {

@@ -24,6 +24,8 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts ./prisma.config.ts
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/docker-entrypoint.sh ./docker-entrypoint.sh
+# prisma/seed.ts roda via tsx e importa direto do client TS gerado (não do dist/ compilado)
+COPY --from=build /app/src/generated ./src/generated
 
 # Chromium para os adapters de Amazon/Shopee (Playwright) + libs de sistema exigidas por ele.
 RUN npx playwright install --with-deps chromium \

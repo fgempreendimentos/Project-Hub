@@ -6,6 +6,7 @@ import { OfferRepository } from '../database/repositories/offer.repository';
 import { ProductRepository } from '../database/repositories/product.repository';
 import { SourceRepository } from '../database/repositories/source.repository';
 import type { Publisher } from '../types/publisher';
+import type { RawOffer } from '../types/raw-offer';
 import type { SourceAdapter } from '../types/source-adapter';
 import type { TextGenerator } from '../types/text-generator';
 import { logger } from '../utils/logger';
@@ -20,6 +21,11 @@ export type PipelineSummary = {
   sent: number;
   failed: number;
 };
+
+export type OfferOutcome =
+  | { status: 'sent' }
+  | { status: 'rejected'; reason: string }
+  | { status: 'failed'; reason: string };
 
 export class OfferPipelineService {
   constructor(
@@ -71,106 +77,7 @@ export class OfferPipelineService {
     summary.fetched = rawOffers.length;
 
     for (const rawOffer of rawOffers) {
-      const product = await this.productRepository.upsert(source.id, rawOffer);
-      const dedupeHash = `${product.id}:${rawOffer.offerPrice}`;
-
-      const [isDuplicate, historicalAveragePrice] = await Promise.all([
-        this.offerRepository.existsByDedupeHash(dedupeHash),
-        this.historyRepository.average(product.id),
-      ]);
-
-      const result = this.validatorChain.run(rawOffer, { isDuplicate, historicalAveragePrice });
-
-      if (!result.approved) {
-        summary.rejected++;
-        await this.offerRepository.create({
-          productId: product.id,
-          originalPrice: rawOffer.originalPrice,
-          offerPrice: rawOffer.offerPrice,
-          discountPercent: rawOffer.discountPercent,
-          shippingCost: rawOffer.shippingCost,
-          available: rawOffer.available,
-          affiliateUrl: rawOffer.url,
-          dedupeHash: `${dedupeHash}:${Date.now()}`,
-          status: 'REJECTED',
-          rejectionReason: `${result.rejectedBy}: ${result.reason}`,
-        });
-        continue;
-      }
-
-      const affiliateUrl = this.affiliateLinkService.convert(rawOffer.url);
-      if (!affiliateUrl) {
-        summary.rejected++;
-        await this.offerRepository.create({
-          productId: product.id,
-          originalPrice: rawOffer.originalPrice,
-          offerPrice: rawOffer.offerPrice,
-          discountPercent: rawOffer.discountPercent,
-          shippingCost: rawOffer.shippingCost,
-          available: rawOffer.available,
-          affiliateUrl: rawOffer.url,
-          dedupeHash: `${dedupeHash}:${Date.now()}`,
-          status: 'REJECTED',
-          rejectionReason: 'Sem programa de afiliado configurado para esta loja de destino',
-        });
-        continue;
-      }
-
-      const offer = await this.offerRepository.create({
-        productId: product.id,
-        originalPrice: rawOffer.originalPrice,
-        offerPrice: rawOffer.offerPrice,
-        discountPercent: rawOffer.discountPercent,
-        shippingCost: rawOffer.shippingCost,
-        available: rawOffer.available,
-        affiliateUrl,
-        dedupeHash,
-        status: 'APPROVED',
-      });
-      summary.approved++;
-
-      await this.historyRepository.create(product.id, rawOffer.offerPrice, rawOffer.shippingCost);
-
-      // O texto leva o link de rastreio (não o link de afiliado direto), para
-      // que o clique passe pelo endpoint /r/:offerId e alimente a métrica de
-      // "clique por afiliado" do dashboard antes de redirecionar à loja real.
-      const trackedUrl = `${env.publicBaseUrl}/r/${offer.id}`;
-
-      const content = await this.textGenerator.generate({
-        title: rawOffer.title,
-        originalPrice: rawOffer.originalPrice,
-        offerPrice: rawOffer.offerPrice,
-        discountPercent: rawOffer.discountPercent,
-        rating: rawOffer.rating,
-        affiliateUrl: trackedUrl,
-      });
-
-      let sentToAny = false;
-      for (const publisher of this.publishers) {
-        const message = await this.messageRepository.createPending(
-          offer.id,
-          publisher.channel,
-          content,
-          rawOffer.imageUrl,
-        );
-        try {
-          await publisher.publish({ offerId: offer.id, content, imageUrl: rawOffer.imageUrl });
-          await this.messageRepository.markSent(message.id);
-          sentToAny = true;
-        } catch (error) {
-          await this.messageRepository.markFailed(message.id, String(error));
-          summary.failed++;
-          await this.logRepository.record(
-            'ERROR',
-            `Falha ao publicar oferta ${offer.id} no canal ${publisher.channel}: ${error}`,
-          );
-        }
-      }
-
-      if (sentToAny) {
-        await this.offerRepository.markSent(offer.id);
-        summary.sent++;
-      }
+      await this.processOffer(rawOffer, source.id, summary);
     }
 
     logger.info(
@@ -178,5 +85,147 @@ export class OfferPipelineService {
     );
 
     return summary;
+  }
+
+  /** Processa uma oferta que não veio de `adapter.fetchOffers()` (ex.: link
+   * colado manualmente no dashboard) pelo mesmo pipeline de validação, link de
+   * afiliado, texto e envio usado pela busca automática. */
+  async processManualOffer(rawOffer: RawOffer): Promise<OfferOutcome> {
+    const source = await this.sourceRepository.findBySlug(this.adapter.sourceSlug);
+    if (!source) {
+      return {
+        status: 'failed',
+        reason: `Fonte "${this.adapter.sourceSlug}" não está cadastrada (rode o seed do Prisma)`,
+      };
+    }
+
+    const summary: PipelineSummary = {
+      sourceSlug: source.slug,
+      fetched: 1,
+      approved: 0,
+      rejected: 0,
+      sent: 0,
+      failed: 0,
+    };
+    return this.processOffer(rawOffer, source.id, summary);
+  }
+
+  private async processOffer(
+    rawOffer: RawOffer,
+    sourceId: string,
+    summary: PipelineSummary,
+  ): Promise<OfferOutcome> {
+    const product = await this.productRepository.upsert(sourceId, rawOffer);
+    const dedupeHash = `${product.id}:${rawOffer.offerPrice}`;
+
+    const [isDuplicate, historicalAveragePrice] = await Promise.all([
+      this.offerRepository.existsByDedupeHash(dedupeHash),
+      this.historyRepository.average(product.id),
+    ]);
+
+    const result = this.validatorChain.run(rawOffer, { isDuplicate, historicalAveragePrice });
+
+    if (!result.approved) {
+      summary.rejected++;
+      const reason = `${result.rejectedBy}: ${result.reason}`;
+      await this.offerRepository.create({
+        productId: product.id,
+        originalPrice: rawOffer.originalPrice,
+        offerPrice: rawOffer.offerPrice,
+        discountPercent: rawOffer.discountPercent,
+        shippingCost: rawOffer.shippingCost,
+        available: rawOffer.available,
+        affiliateUrl: rawOffer.url,
+        dedupeHash: `${dedupeHash}:${Date.now()}`,
+        status: 'REJECTED',
+        rejectionReason: reason,
+      });
+      return { status: 'rejected', reason };
+    }
+
+    const affiliateUrl = this.affiliateLinkService.convert(rawOffer.url);
+    if (!affiliateUrl) {
+      summary.rejected++;
+      const reason = 'Sem programa de afiliado configurado para esta loja de destino';
+      await this.offerRepository.create({
+        productId: product.id,
+        originalPrice: rawOffer.originalPrice,
+        offerPrice: rawOffer.offerPrice,
+        discountPercent: rawOffer.discountPercent,
+        shippingCost: rawOffer.shippingCost,
+        available: rawOffer.available,
+        affiliateUrl: rawOffer.url,
+        dedupeHash: `${dedupeHash}:${Date.now()}`,
+        status: 'REJECTED',
+        rejectionReason: reason,
+      });
+      return { status: 'rejected', reason };
+    }
+
+    const offer = await this.offerRepository.create({
+      productId: product.id,
+      originalPrice: rawOffer.originalPrice,
+      offerPrice: rawOffer.offerPrice,
+      discountPercent: rawOffer.discountPercent,
+      shippingCost: rawOffer.shippingCost,
+      available: rawOffer.available,
+      affiliateUrl,
+      dedupeHash,
+      status: 'APPROVED',
+    });
+    summary.approved++;
+
+    await this.historyRepository.create(product.id, rawOffer.offerPrice, rawOffer.shippingCost);
+
+    // O texto leva o link de rastreio (não o link de afiliado direto), para
+    // que o clique passe pelo endpoint /r/:offerId e alimente a métrica de
+    // "clique por afiliado" do dashboard antes de redirecionar à loja real.
+    const trackedUrl = `${env.publicBaseUrl}/r/${offer.id}`;
+
+    const content = await this.textGenerator.generate({
+      title: rawOffer.title,
+      originalPrice: rawOffer.originalPrice,
+      offerPrice: rawOffer.offerPrice,
+      discountPercent: rawOffer.discountPercent,
+      rating: rawOffer.rating,
+      affiliateUrl: trackedUrl,
+    });
+
+    let sentToAny = false;
+    let lastError: string | undefined;
+    for (const publisher of this.publishers) {
+      const message = await this.messageRepository.createPending(
+        offer.id,
+        publisher.channel,
+        content,
+        rawOffer.imageUrl,
+      );
+      try {
+        await publisher.publish({
+          offerId: offer.id,
+          content,
+          title: rawOffer.title,
+          imageUrl: rawOffer.imageUrl,
+          sourceUrl: trackedUrl,
+        });
+        await this.messageRepository.markSent(message.id);
+        sentToAny = true;
+      } catch (error) {
+        await this.messageRepository.markFailed(message.id, String(error));
+        summary.failed++;
+        lastError = String(error);
+        await this.logRepository.record(
+          'ERROR',
+          `Falha ao publicar oferta ${offer.id} no canal ${publisher.channel}: ${error}`,
+        );
+      }
+    }
+
+    if (sentToAny) {
+      await this.offerRepository.markSent(offer.id);
+      summary.sent++;
+      return { status: 'sent' };
+    }
+    return { status: 'failed', reason: lastError ?? 'Falha ao publicar em todos os canais' };
   }
 }

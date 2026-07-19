@@ -126,6 +126,47 @@
   th { color: var(--text-muted); font-weight: 500; }
 
   .empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+
+  .manual-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  .manual-form .field-full { grid-column: 1 / -1; }
+  .manual-form label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .manual-form input {
+    width: 100%;
+    font: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--page-plane);
+    color: var(--text-primary);
+  }
+  .manual-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .manual-form-actions button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    background: var(--series-1);
+    color: #ffffff;
+    cursor: pointer;
+  }
+  .manual-form-actions button:disabled { opacity: 0.6; cursor: default; }
+  .manual-form-feedback { font-size: 13px; }
+  .manual-form-feedback.ok { color: var(--series-2); }
+  .manual-form-feedback.error { color: #d3453a; }
 </style>
 </head>
 <body>
@@ -136,6 +177,41 @@
 
 <main>
   <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div class="card">
+    <h2>Adicionar oferta manual (Mercado Livre)</h2>
+    <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px;">
+      A busca automática do Mercado Livre está bloqueada pela API deles. Cole aqui o link de um
+      produto que você mesmo encontrou — ele passa pela mesma validação, link de afiliado e envio
+      da busca automática.
+    </p>
+    <form class="manual-form" id="manual-offer-form">
+      <div class="field-full">
+        <label for="manual-url">Link do produto</label>
+        <input type="url" id="manual-url" required placeholder="https://produto.mercadolivre.com.br/MLB-..." />
+      </div>
+      <div class="field-full">
+        <label for="manual-title">Título</label>
+        <input type="text" id="manual-title" required placeholder="Nome do produto" />
+      </div>
+      <div>
+        <label for="manual-original-price">Preço original (R$)</label>
+        <input type="number" id="manual-original-price" required min="0.01" step="0.01" placeholder="199,90" />
+      </div>
+      <div>
+        <label for="manual-offer-price">Preço da oferta (R$)</label>
+        <input type="number" id="manual-offer-price" required min="0.01" step="0.01" placeholder="129,90" />
+      </div>
+      <div class="field-full">
+        <label for="manual-image-url">Imagem do produto (opcional, URL)</label>
+        <input type="url" id="manual-image-url" placeholder="https://..." />
+      </div>
+      <div class="manual-form-actions">
+        <button type="submit" id="manual-offer-submit">Enviar oferta</button>
+        <span class="manual-form-feedback" id="manual-offer-feedback"></span>
+      </div>
+    </form>
+  </div>
 
   <div class="card">
     <h2>Ofertas enviadas ao longo do tempo</h2>
@@ -386,6 +462,58 @@
 
     await loadTrend('daily');
   }
+
+  const manualForm = document.getElementById('manual-offer-form');
+  const manualFeedback = document.getElementById('manual-offer-feedback');
+  const manualSubmitButton = document.getElementById('manual-offer-submit');
+
+  const OUTCOME_LABELS = {
+    sent: 'Oferta aprovada e enviada ao WhatsApp.',
+    rejected: 'Oferta rejeitada',
+    failed: 'Falha ao processar',
+  };
+
+  manualForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    manualSubmitButton.disabled = true;
+    manualFeedback.textContent = 'Enviando...';
+    manualFeedback.className = 'manual-form-feedback';
+
+    const payload = {
+      url: document.getElementById('manual-url').value.trim(),
+      title: document.getElementById('manual-title').value.trim(),
+      originalPrice: Number(document.getElementById('manual-original-price').value),
+      offerPrice: Number(document.getElementById('manual-offer-price').value),
+      imageUrl: document.getElementById('manual-image-url').value.trim() || undefined,
+    };
+
+    try {
+      const res = await fetch('/api/manual-offers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+
+      if (!res.ok) {
+        manualFeedback.textContent = body.error ?? `Erro (${res.status})`;
+        manualFeedback.className = 'manual-form-feedback error';
+      } else if (body.status === 'sent') {
+        manualFeedback.textContent = OUTCOME_LABELS.sent;
+        manualFeedback.className = 'manual-form-feedback ok';
+        manualForm.reset();
+        await loadAll();
+      } else {
+        manualFeedback.textContent = `${OUTCOME_LABELS[body.status] ?? 'Resultado'}: ${body.reason ?? ''}`;
+        manualFeedback.className = 'manual-form-feedback error';
+      }
+    } catch (error) {
+      manualFeedback.textContent = `Erro de rede: ${error.message}`;
+      manualFeedback.className = 'manual-form-feedback error';
+    } finally {
+      manualSubmitButton.disabled = false;
+    }
+  });
 
   document.querySelectorAll('.filters button').forEach((button) => {
     button.addEventListener('click', () => {
