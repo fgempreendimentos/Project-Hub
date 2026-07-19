@@ -135,7 +135,8 @@
     color: var(--text-secondary);
     margin-bottom: 4px;
   }
-  .manual-form input {
+  .manual-form input,
+  .manual-form select {
     width: 100%;
     font: inherit;
     font-size: 13px;
@@ -179,15 +180,22 @@
   <div class="kpi-grid" id="kpi-grid"></div>
 
   <div class="card">
-    <h2>Adicionar oferta manual (Mercado Livre)</h2>
-    <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px;">
+    <h2>Adicionar oferta manual (Mercado Livre / Shopee)</h2>
+    <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px;" id="manual-offer-hint">
       A busca automática do Mercado Livre está bloqueada pela API deles. Cole aqui o link de um
       produto que você mesmo encontrou — ele passa pela mesma validação, link de afiliado e envio
       da busca automática.
     </p>
     <form class="manual-form" id="manual-offer-form">
       <div class="field-full">
-        <label for="manual-url">Link do produto</label>
+        <label for="manual-source">Fonte</label>
+        <select id="manual-source">
+          <option value="mercadolivre">Mercado Livre</option>
+          <option value="shopee">Shopee</option>
+        </select>
+      </div>
+      <div class="field-full">
+        <label for="manual-url" id="manual-url-label">Link do produto</label>
         <input type="url" id="manual-url" required placeholder="https://produto.mercadolivre.com.br/MLB-..." />
       </div>
       <div class="field-full">
@@ -466,6 +474,32 @@
   const manualForm = document.getElementById('manual-offer-form');
   const manualFeedback = document.getElementById('manual-offer-feedback');
   const manualSubmitButton = document.getElementById('manual-offer-submit');
+  const manualSource = document.getElementById('manual-source');
+  const manualHint = document.getElementById('manual-offer-hint');
+  const manualUrlLabel = document.getElementById('manual-url-label');
+  const manualUrlInput = document.getElementById('manual-url');
+
+  const SOURCE_COPY = {
+    mercadolivre: {
+      hint: 'A busca automática do Mercado Livre está bloqueada pela API deles. Cole aqui o link do produto que você mesmo encontrou — ele passa pela mesma validação, link de afiliado e envio da busca automática.',
+      urlLabel: 'Link do produto',
+      urlPlaceholder: 'https://produto.mercadolivre.com.br/MLB-...',
+    },
+    shopee: {
+      hint: 'A Shopee não permite gerar o link de afiliado automaticamente. Gere o link no painel Shopee Afiliados e cole aqui o link de afiliado já pronto (não o link puro do produto) — ele passa pela mesma validação, texto e envio da busca automática, sem tentar convertê-lo de novo.',
+      urlLabel: 'Link de afiliado (gerado no painel Shopee Afiliados)',
+      urlPlaceholder: 'https://s.shopee.com.br/...',
+    },
+  };
+
+  function applySourceCopy() {
+    const copy = SOURCE_COPY[manualSource.value];
+    manualHint.textContent = copy.hint;
+    manualUrlLabel.textContent = copy.urlLabel;
+    manualUrlInput.placeholder = copy.urlPlaceholder;
+  }
+  manualSource.addEventListener('change', applySourceCopy);
+  applySourceCopy();
 
   const OUTCOME_LABELS = {
     sent: 'Oferta aprovada e enviada ao WhatsApp.',
@@ -480,6 +514,7 @@
     manualFeedback.className = 'manual-form-feedback';
 
     const payload = {
+      source: manualSource.value,
       url: document.getElementById('manual-url').value.trim(),
       title: document.getElementById('manual-title').value.trim(),
       originalPrice: Number(document.getElementById('manual-original-price').value),
@@ -502,6 +537,7 @@
         manualFeedback.textContent = OUTCOME_LABELS.sent;
         manualFeedback.className = 'manual-form-feedback ok';
         manualForm.reset();
+        applySourceCopy();
         await loadAll();
       } else {
         manualFeedback.textContent = `${OUTCOME_LABELS[body.status] ?? 'Resultado'}: ${body.reason ?? ''}`;

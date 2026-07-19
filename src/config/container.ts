@@ -122,15 +122,20 @@ const pipelines = {
 };
 
 // --- Estatísticas / Dashboard ---
-// Entrada manual de ofertas do Mercado Livre reaproveita o pipeline dessa
-// fonte (mesma validação/afiliado/texto/envio) — necessário porque a API de
-// busca deles está bloqueada (ver comentário em startScheduler abaixo).
+// Entrada manual de ofertas (Mercado Livre e Shopee) reaproveita o pipeline
+// de cada fonte (mesma validação/texto/envio) — necessário porque a busca
+// automática de ambas está bloqueada (ver comentário em startScheduler
+// abaixo). Para Shopee, o link colado já É o de afiliado (gerado à mão no
+// painel deles) — ver `manual-offers.routes.ts`.
 const statsService = new StatsService(statsRepository);
 const apiRouter = buildRouter({
   statsService,
   offerRepository,
   clickRepository,
-  manualOfferPipeline: pipelines.mercadolivre,
+  manualOfferPipelines: {
+    mercadolivre: pipelines.mercadolivre,
+    shopee: pipelines.shopee,
+  },
 });
 
 // --- Scheduler ---

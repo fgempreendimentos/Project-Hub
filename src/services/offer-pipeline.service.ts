@@ -89,8 +89,18 @@ export class OfferPipelineService {
 
   /** Processa uma oferta que não veio de `adapter.fetchOffers()` (ex.: link
    * colado manualmente no dashboard) pelo mesmo pipeline de validação, link de
-   * afiliado, texto e envio usado pela busca automática. */
-  async processManualOffer(rawOffer: RawOffer): Promise<OfferOutcome> {
+   * afiliado, texto e envio usado pela busca automática.
+   *
+   * `alreadyAffiliateLink`: para fontes onde não dá pra fabricar o link de
+   * afiliado a partir da URL do produto (ex.: Shopee — ver
+   * `ShopeeLinkConverter`), quem cola o link no dashboard já colou o link de
+   * afiliado gerado à mão no painel da loja; nesse caso pula o
+   * `AffiliateLinkService` e usa `rawOffer.url` como está, em vez de tentar
+   * (e falhar) convertê-lo. */
+  async processManualOffer(
+    rawOffer: RawOffer,
+    options?: { alreadyAffiliateLink?: boolean },
+  ): Promise<OfferOutcome> {
     const source = await this.sourceRepository.findBySlug(this.adapter.sourceSlug);
     if (!source) {
       return {
@@ -107,13 +117,14 @@ export class OfferPipelineService {
       sent: 0,
       failed: 0,
     };
-    return this.processOffer(rawOffer, source.id, summary);
+    return this.processOffer(rawOffer, source.id, summary, options?.alreadyAffiliateLink ?? false);
   }
 
   private async processOffer(
     rawOffer: RawOffer,
     sourceId: string,
     summary: PipelineSummary,
+    alreadyAffiliateLink = false,
   ): Promise<OfferOutcome> {
     const product = await this.productRepository.upsert(sourceId, rawOffer);
     const dedupeHash = `${product.id}:${rawOffer.offerPrice}`;
@@ -143,7 +154,9 @@ export class OfferPipelineService {
       return { status: 'rejected', reason };
     }
 
-    const affiliateUrl = this.affiliateLinkService.convert(rawOffer.url);
+    const affiliateUrl = alreadyAffiliateLink
+      ? rawOffer.url
+      : this.affiliateLinkService.convert(rawOffer.url);
     if (!affiliateUrl) {
       summary.rejected++;
       const reason = 'Sem programa de afiliado configurado para esta loja de destino';

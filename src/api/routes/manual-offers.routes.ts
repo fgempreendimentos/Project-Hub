@@ -6,9 +6,22 @@ import type { OfferPipelineService } from '../../services/offer-pipeline.service
 import type { RawOffer } from '../../types/raw-offer';
 import { logger } from '../../utils/logger';
 
+export type ManualOfferSource = 'mercadolivre' | 'shopee';
+
+/** Mercado Livre: código fabrica o link de afiliado a partir da URL do
+ * produto (query param). Shopee: não dá — o link de afiliado é um
+ * short-link opaco (`s.shopee.com.br/…`) que só a própria Shopee gera (ver
+ * `ShopeeLinkConverter`), então quem usa essa fonte já cola o link de
+ * afiliado pronto, gerado à mão no painel, e o pipeline pula a conversão. */
+const SOURCES: Record<ManualOfferSource, { alreadyAffiliateLink: boolean }> = {
+  mercadolivre: { alreadyAffiliateLink: false },
+  shopee: { alreadyAffiliateLink: true },
+};
+
 /** Extrai o ID do produto (ex.: MLB1234567890) do link para servir de
- * externalId/dedupe — cai num hash estável do link se não achar o padrão da
- * fonte, então links de outras lojas também funcionam. */
+ * externalId/dedupe — cai num hash estável do link se não achar o padrão de
+ * nenhuma fonte conhecida, então links da Shopee (ou de outra loja) também
+ * funcionam. */
 function extractExternalId(url: string): string {
   const match = url.match(/MLB-?(\d+)/i);
   if (match) {
@@ -22,11 +35,13 @@ function extractExternalId(url: string): string {
  * Para Mercado Livre, mantém só origem+path: evita que um `matt_word` de
  * OUTRO afiliado (ex.: link recebido de alguém via compartilhamento) sobreviva
  * e dispute com o nosso quando o MercadoLivreLinkConverter anexa o nosso por
- * cima, e deixa o link estável para dedupe/exibição. */
-function normalizeUrl(url: string): string {
+ * cima, e deixa o link estável para dedupe/exibição. Para Shopee (e qualquer
+ * outra fonte) não mexe: o link já É o de afiliado, a query string toda
+ * (`gads_t_sig`, `uls_trackid`…) precisa sobreviver intacta. */
+function normalizeUrl(url: string, source: ManualOfferSource): string {
   try {
     const parsed = new URL(url);
-    if (/mercadolivre\.com|mercadolibre\.com/i.test(parsed.hostname)) {
+    if (source === 'mercadolivre' && /mercadolivre\.com|mercadolibre\.com/i.test(parsed.hostname)) {
       return `${parsed.origin}${parsed.pathname}`;
     }
     return url;
@@ -36,16 +51,24 @@ function normalizeUrl(url: string): string {
 }
 
 /**
- * Entrada manual de ofertas: cola-se o link do produto encontrado por fora
- * (a busca automática do Mercado Livre está bloqueada pela API deles — ver
- * container.ts) junto com título e preços, e a oferta passa pelo mesmo
- * pipeline de validação/afiliado/texto/envio da busca automática.
+ * Entrada manual de ofertas: cola-se o link do produto (ou, no caso da
+ * Shopee, o link de afiliado já gerado no painel deles) encontrado por fora
+ * — a busca automática do Mercado Livre está bloqueada pela API deles e a
+ * Shopee exige sessão logada para raspar (ver container.ts) — junto com
+ * título e preços, e a oferta passa pelo mesmo pipeline de
+ * validação/afiliado/texto/envio da busca automática.
  */
-export function manualOffersRoutes(pipeline: OfferPipelineService): Router {
+export function manualOffersRoutes(pipelines: Record<ManualOfferSource, OfferPipelineService>): Router {
   const router = Router();
 
   router.post('/', async (req, res) => {
-    const { url, title, originalPrice, offerPrice, imageUrl } = req.body ?? {};
+    const { source, url, title, originalPrice, offerPrice, imageUrl } = req.body ?? {};
+
+    if (typeof source !== 'string' || !(source in SOURCES)) {
+      res.status(400).json({ error: 'Fonte inválida — escolha "mercadolivre" ou "shopee"' });
+      return;
+    }
+    const sourceKey = source as ManualOfferSource;
 
     if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
       res.status(400).json({ error: 'Link inválido — cole a URL completa do produto (http/https)' });
@@ -75,7 +98,7 @@ export function manualOffersRoutes(pipeline: OfferPipelineService): Router {
     }
 
     const discountPercent = Math.round(((original - offer) / original) * 100 * 100) / 100;
-    const cleanUrl = normalizeUrl(url);
+    const cleanUrl = normalizeUrl(url, sourceKey);
 
     const rawOffer: RawOffer = {
       externalId: extractExternalId(cleanUrl),
@@ -89,10 +112,12 @@ export function manualOffersRoutes(pipeline: OfferPipelineService): Router {
     };
 
     try {
-      const outcome = await pipeline.processManualOffer(rawOffer);
+      const outcome = await pipelines[sourceKey].processManualOffer(rawOffer, {
+        alreadyAffiliateLink: SOURCES[sourceKey].alreadyAffiliateLink,
+      });
       res.json(outcome);
     } catch (error) {
-      logger.error(`Falha ao processar oferta manual: ${error}`);
+      logger.error(`Falha ao processar oferta manual (${sourceKey}): ${error}`);
       res.status(500).json({ error: 'Erro interno ao processar a oferta' });
     }
   });
