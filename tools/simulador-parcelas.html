@@ -967,11 +967,10 @@
     todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
 
     let saldo = 0;
-    todas.forEach((p, i) => {
+    todas.forEach(p => {
       const elegivelParaCorrecao = p.indiceNoGrupo >= p.corrigirApartirDe;
       const meses = elegivelParaCorrecao ? monthDiff(p.correcaoAnchorDate, p.data) : 0;
       const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, meses, p.outroPct);
-      p.numero = i+1;
       p.corrFG = corr.corrFG;
       p.corrIndice = corr.corrIndice;
       p.corrTotal = corr.corrTotal;
@@ -1005,7 +1004,7 @@
 
     tbody.innerHTML = todas.map(p => `
       <tr>
-        <td>${String(p.numero).padStart(3,'0')}</td>
+        <td>${String(p.indiceNoGrupo).padStart(3,'0')}</td>
         <td><span class="tag ${tagClass[p.tipo]}">${p.tipo}</span></td>
         <td>${formatMonthYear(p.data)}</td>
         <td>${formatMoneyBRL(p.valorOriginal)}</td>
@@ -1326,7 +1325,7 @@
     rows.push(['Nº','Tipo','Vencimento','Valor Original','Correção 0,69%','Correção Índice','Total Correção','Valor Final','Saldo Acumulado']);
     ultimoCronograma.forEach(p => {
       rows.push([
-        p.numero, p.tipo, formatMonthYear(p.data),
+        p.indiceNoGrupo, p.tipo, formatMonthYear(p.data),
         Number(p.valorOriginal.toFixed(2)), Number(p.corrFG.toFixed(2)), Number(p.corrIndice.toFixed(2)),
         Number(p.corrTotal.toFixed(2)), Number(p.valorFinal.toFixed(2)), Number(p.saldoAcumulado.toFixed(2))
       ]);
