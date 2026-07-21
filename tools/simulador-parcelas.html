@@ -804,11 +804,10 @@
       case 'fg_outro': rateFG = indices.FG/100; rateIndice = (outroPercentual||0)/100; break;
       default: break; // 'nenhuma'
     }
-    // As colunas de referência (0,69% e Índice) mostram juros compostos de cada taxa isoladamente.
+    // Juros compostos mensais, aplicados independentemente a cada taxa.
     const corrFG = valorOriginal * (Math.pow(1+rateFG, meses) - 1);
     const corrIndice = valorOriginal * (Math.pow(1+rateIndice, meses) - 1);
-    // O valor efetivamente cobrado é linear sobre a soma das taxas (não é a soma das duas colunas acima).
-    const corrTotal = valorOriginal * (rateFG + rateIndice) * meses;
+    const corrTotal = corrFG + corrIndice;
     return { corrFG, corrIndice, corrTotal, valorFinal: valorOriginal + corrTotal };
   }
 
