@@ -669,6 +669,16 @@
     return Math.max(0, meses);
   }
 
+  // Data de referência para contagem de meses da correção. Quando o reajuste começa desde a
+  // 1ª parcela do grupo (padrão), a referência é a data de assinatura do contrato. Quando o
+  // corretor adia o início da correção para a parcela nº N, a referência passa a ser o
+  // vencimento da parcela N-1 (a última sem reajuste) — evitando que a parcela N acumule de
+  // uma só vez a correção de todos os meses já passados desde a assinatura.
+  function calcularAnchorCorrecao(dataAssinatura, dataInicialGrupo, passoMeses, corrigirApartirDe){
+    if(corrigirApartirDe <= 1) return dataAssinatura;
+    return addMonths(dataInicialGrupo, (corrigirApartirDe-2)*passoMeses);
+  }
+
   /* =========================================================
    *  UTILITÁRIOS MONETÁRIOS
    * ========================================================= */
@@ -840,16 +850,19 @@
     const correcaoTipo = document.getElementById('selCorrecaoEntrada').value;
     const outroPct = parseFloat(document.getElementById('inpOutroEntrada').value) || 0;
     const parcelas = [];
+    let dataInicialGrupo;
 
     if(tipo === 'avista'){
       const dataStr = document.getElementById('inpEntradaAvistaData').value;
       const data = dataStr ? parseDateInput(dataStr) : dataAssinatura;
+      dataInicialGrupo = data;
       const valor = getMoneyValue(document.getElementById('inpEntradaAvistaValor'));
       parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1 });
     } else {
       const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
       const dataStr = document.getElementById('inpEntradaData').value;
       const dataInicial = dataStr ? parseDateInput(dataStr) : dataAssinatura;
+      dataInicialGrupo = dataInicial;
       const modo = document.querySelector('input[name="entradaModoValor"]:checked').value;
       let valores;
       if(modo === 'total'){
@@ -869,8 +882,14 @@
       }
     }
 
-    // Regra fixa: a 1ª parcela da entrada nunca recebe correção; as demais seguem o índice escolhido.
-    parcelas.forEach(p => { p.tipo = 'Entrada'; p.correcaoTipo = correcaoTipo; p.outroPct = outroPct; p.corrigirApartirDe = 2; });
+    // Regra fixa: a 1ª parcela da entrada nunca recebe correção; as demais seguem o índice escolhido,
+    // contando os meses a partir do vencimento da 1ª parcela (nunca desde a assinatura do contrato).
+    const corrigirApartirDe = 2;
+    const correcaoAnchorDate = calcularAnchorCorrecao(dataAssinatura, dataInicialGrupo, 1, corrigirApartirDe);
+    parcelas.forEach(p => {
+      p.tipo = 'Entrada'; p.correcaoTipo = correcaoTipo; p.outroPct = outroPct;
+      p.corrigirApartirDe = corrigirApartirDe; p.correcaoAnchorDate = correcaoAnchorDate;
+    });
     return parcelas;
   }
 
@@ -913,6 +932,7 @@
     const correcaoTipo = document.getElementById(`selCorrecao${prefixo}`).value;
     const outroPct = parseFloat(document.getElementById(`inpOutro${prefixo}`).value) || 0;
     const corrigirApartirDe = Math.max(1, parseInt(document.getElementById(`inp${prefixo}CorrigirDe`).value,10) || 1);
+    const correcaoAnchorDate = calcularAnchorCorrecao(dataAssinatura, dataInicial, passoMeses, corrigirApartirDe);
     const parcelas = [];
     for(let i=0;i<qtd;i++){
       parcelas.push({
@@ -921,7 +941,8 @@
         valorOriginal: valores[i],
         correcaoTipo, outroPct,
         indiceNoGrupo: i+1,
-        corrigirApartirDe
+        corrigirApartirDe,
+        correcaoAnchorDate
       });
     }
     return parcelas;
@@ -940,16 +961,16 @@
 
   let ultimoCronograma = [];
 
-  function gerarTabela(entrada, mensais, semestrais, dataAssinatura){
+  function gerarTabela(entrada, mensais, semestrais){
     const prioridade = { Entrada:0, Mensal:1, Semestral:2 };
     const todas = [...entrada, ...mensais, ...semestrais];
     todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
 
     let saldo = 0;
     todas.forEach((p, i) => {
-      const meses = monthDiff(dataAssinatura, p.data);
       const elegivelParaCorrecao = p.indiceNoGrupo >= p.corrigirApartirDe;
-      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, elegivelParaCorrecao ? meses : 0, p.outroPct);
+      const meses = elegivelParaCorrecao ? monthDiff(p.correcaoAnchorDate, p.data) : 0;
+      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, meses, p.outroPct);
       p.numero = i+1;
       p.corrFG = corr.corrFG;
       p.corrIndice = corr.corrIndice;
@@ -1072,7 +1093,7 @@
     const entrada = calcularEntrada(dataAssinatura);
     const mensais = calcularMensais(dataAssinatura);
     const semestrais = calcularSemestrais(dataAssinatura);
-    const todas = gerarTabela(entrada, mensais, semestrais, dataAssinatura);
+    const todas = gerarTabela(entrada, mensais, semestrais);
     atualizarResumo(todas, entrada, mensais, semestrais);
   }
 
