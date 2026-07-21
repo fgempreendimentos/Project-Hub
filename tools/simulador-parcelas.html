@@ -373,6 +373,7 @@
               <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroEntrada" value="0"><span class="suffix">%</span></div>
             </div>
           </div>
+          <p class="hint" id="entradaCorrecaoHint" style="display:none;">A 1ª parcela da entrada nunca recebe correção. O reajuste é aplicado automaticamente a partir da 2ª parcela em diante.</p>
         </div>
       </div>
 
@@ -442,6 +443,11 @@
               <div class="field" id="outroMensaisWrap" style="display:none;">
                 <label for="inpOutroMensais">Percentual do outro índice (a.m.)</label>
                 <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroMensais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpMensaisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpMensaisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela mensal).</p>
               </div>
             </div>
           </fieldset>
@@ -514,6 +520,11 @@
               <div class="field" id="outroSemestraisWrap" style="display:none;">
                 <label for="inpOutroSemestrais">Percentual do outro índice (a.m.)</label>
                 <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroSemestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpSemestraisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpSemestraisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela semestral).</p>
               </div>
             </div>
           </fieldset>
@@ -755,6 +766,7 @@
 
     const corrEntrada = document.getElementById('selCorrecaoEntrada').value;
     document.getElementById('outroEntradaWrap').style.display = (corrEntrada==='outro'||corrEntrada==='fg_outro') ? '' : 'none';
+    document.getElementById('entradaCorrecaoHint').style.display = (tipoEntrada === 'parcelada' && corrEntrada !== 'nenhuma') ? '' : 'none';
 
     const mensaisOn = document.getElementById('chkMensaisHabilitado').checked;
     document.getElementById('mensaisFieldset').disabled = !mensaisOn;
@@ -789,7 +801,7 @@
       const dataStr = document.getElementById('inpEntradaAvistaData').value;
       const data = dataStr ? parseDateInput(dataStr) : dataAssinatura;
       const valor = getMoneyValue(document.getElementById('inpEntradaAvistaValor'));
-      parcelas.push({ data, valorOriginal: valor });
+      parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1 });
     } else {
       const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
       const dataStr = document.getElementById('inpEntradaData').value;
@@ -806,11 +818,12 @@
         setMoneyValue(document.getElementById('inpEntradaValorTotal'), parcela*qtd);
       }
       for(let i=0;i<qtd;i++){
-        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i] });
+        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i], indiceNoGrupo: i+1 });
       }
     }
 
-    parcelas.forEach(p => { p.tipo = 'Entrada'; p.correcaoTipo = correcaoTipo; p.outroPct = outroPct; });
+    // Regra fixa: a 1ª parcela da entrada nunca recebe correção; as demais seguem o índice escolhido.
+    parcelas.forEach(p => { p.tipo = 'Entrada'; p.correcaoTipo = correcaoTipo; p.outroPct = outroPct; p.corrigirApartirDe = 2; });
     return parcelas;
   }
 
@@ -852,13 +865,16 @@
 
     const correcaoTipo = document.getElementById(`selCorrecao${prefixo}`).value;
     const outroPct = parseFloat(document.getElementById(`inpOutro${prefixo}`).value) || 0;
+    const corrigirApartirDe = Math.max(1, parseInt(document.getElementById(`inp${prefixo}CorrigirDe`).value,10) || 1);
     const parcelas = [];
     for(let i=0;i<qtd;i++){
       parcelas.push({
         tipo: tipoLabel,
         data: addMonths(dataInicial, i*passoMeses),
         valorOriginal: valores[i],
-        correcaoTipo, outroPct
+        correcaoTipo, outroPct,
+        indiceNoGrupo: i+1,
+        corrigirApartirDe
       });
     }
     return parcelas;
@@ -885,7 +901,8 @@
     let saldo = 0;
     todas.forEach((p, i) => {
       const meses = monthDiff(dataAssinatura, p.data);
-      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, meses, p.outroPct);
+      const elegivelParaCorrecao = p.indiceNoGrupo >= p.corrigirApartirDe;
+      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, elegivelParaCorrecao ? meses : 0, p.outroPct);
       p.numero = i+1;
       p.corrFG = corr.corrFG;
       p.corrIndice = corr.corrIndice;
@@ -1043,6 +1060,7 @@
     setMoneyValue(document.getElementById('inpMensaisValorParcela'), 0);
     document.getElementById('selCorrecaoMensais').value = 'nenhuma';
     document.getElementById('inpOutroMensais').value = 0;
+    document.getElementById('inpMensaisCorrigirDe').value = 1;
 
     document.getElementById('chkSemestraisHabilitado').checked = false;
     document.getElementById('selSemestraisModo').value = 'qtd_total';
@@ -1052,6 +1070,7 @@
     setMoneyValue(document.getElementById('inpSemestraisValorParcela'), 0);
     document.getElementById('selCorrecaoSemestrais').value = 'nenhuma';
     document.getElementById('inpOutroSemestrais').value = 0;
+    document.getElementById('inpSemestraisCorrigirDe').value = 1;
 
     recalcularTudo();
   }
