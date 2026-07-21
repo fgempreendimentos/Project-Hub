@@ -565,7 +565,7 @@
       <div class="card no-print" id="cardIndices">
         <div class="card-head"><h2><span class="icon">⚙️</span> Configuração de Índices</h2></div>
         <div class="card-body compact">
-          <p class="hint" style="margin:0 0 12px;">Percentuais mensais (%). Atualize aqui quando novos índices forem divulgados.</p>
+          <p class="hint" style="margin:0 0 12px;">Percentuais mensais fixos (%). Atualize aqui quando o contrato definir outro valor.</p>
           <div class="idx-grid">
             <div class="idx-item">
               <label for="idxFG">FG (padrão)</label>
@@ -605,7 +605,7 @@
               <th>Tipo</th>
               <th>Vencimento</th>
               <th>Valor Original</th>
-              <th>Correção 0,69%</th>
+              <th id="thCorrecaoFG">Correção 0,69%</th>
               <th>Correção Índice</th>
               <th>Total Correção</th>
               <th>Valor Final</th>
@@ -775,7 +775,7 @@
    *  CONFIGURAÇÃO DE ÍNDICES (editável na UI, fácil de ajustar)
    * ========================================================= */
 
-  // Objeto central de índices — percentuais mensais. Atualize os valores (ou via UI) quando novos índices saírem.
+  // Objeto central de índices — percentuais mensais fixos. Atualize os valores (ou via UI) quando novos índices saírem.
   const indices = { FG: 0.69, IPCA: 0, INPC: 0, IGPM: 0 };
 
   function lerIndices(){
@@ -783,6 +783,19 @@
     indices.IPCA = parseFloat(document.getElementById('idxIPCA').value) || 0;
     indices.INPC = parseFloat(document.getElementById('idxINPC').value) || 0;
     indices.IGPM = parseFloat(document.getElementById('idxIGPM').value) || 0;
+    document.getElementById('thCorrecaoFG').textContent = `Correção ${indices.FG.toLocaleString('pt-BR')}%`;
+  }
+
+  // Resolve o fator (fração, ex.: 0.015 = 1,5%) da correção por índice para um tipo de correção.
+  // Todos os índices são percentuais mensais fixos, aplicados de forma linear (taxa x meses).
+  function calcularFatorIndice(tipoCorrecao, outroPercentual, meses){
+    switch(tipoCorrecao){
+      case 'ipca': case 'fg_ipca': return (indices.IPCA/100) * meses;
+      case 'inpc': case 'fg_inpc': return (indices.INPC/100) * meses;
+      case 'igpm': case 'fg_igpm': return (indices.IGPM/100) * meses;
+      case 'outro': case 'fg_outro': return (outroPercentual||0)/100 * meses;
+      default: return 0;
+    }
   }
 
   /* =========================================================
@@ -791,42 +804,25 @@
 
   // Calcula a correção (juros compostos mensais) de uma parcela conforme o tipo de reajuste escolhido.
   // Resolve as taxas mensais (FG e índice) a partir do tipo de correção escolhido.
-  function resolverTaxasCorrecao(tipoCorrecao, outroPercentual){
-    let rateFG = 0, rateIndice = 0;
-    switch(tipoCorrecao){
-      case 'fg': rateFG = indices.FG/100; break;
-      case 'ipca': rateIndice = indices.IPCA/100; break;
-      case 'inpc': rateIndice = indices.INPC/100; break;
-      case 'igpm': rateIndice = indices.IGPM/100; break;
-      case 'outro': rateIndice = (outroPercentual||0)/100; break;
-      case 'fg_ipca': rateFG = indices.FG/100; rateIndice = indices.IPCA/100; break;
-      case 'fg_inpc': rateFG = indices.FG/100; rateIndice = indices.INPC/100; break;
-      case 'fg_igpm': rateFG = indices.FG/100; rateIndice = indices.IGPM/100; break;
-      case 'fg_outro': rateFG = indices.FG/100; rateIndice = (outroPercentual||0)/100; break;
-      default: break; // 'nenhuma'
-    }
-    return { rateFG, rateIndice };
-  }
-
-  // Aplica a correção sequencialmente às parcelas de um mesmo grupo (entrada, mensal ou semestral).
-  // 0,69% FG é linear sobre o valor original da própria parcela (valor x taxa x meses).
-  // O índice (IPCA/INPC/IGP-M/outro) incide sobre o valor já corrigido da parcela anterior do
-  // mesmo grupo (ou o valor original, na 1ª parcela), multiplicado pela taxa e pelos meses.
+  // Aplica a correção a cada parcela de um grupo (entrada, mensal ou semestral).
+  // 0,69% FG: juros simples sobre o valor original da própria parcela (valor x taxa x meses).
+  // Índice (IPCA/INPC/IGP-M): soma dos percentuais mensais publicados (sem acumular/compor,
+  // negativos contam como 0%) sobre o valor original da própria parcela — não é recursivo.
+  // "Outro índice": percentual manual fixo, linear (valor x taxa x meses).
   function aplicarCorrecaoGrupo(parcelas){
-    let valorFinalAnterior = null;
     parcelas.forEach(p => {
       const elegivel = p.indiceNoGrupo >= p.corrigirApartirDe;
       const meses = elegivel ? monthDiff(p.correcaoAnchorDate, p.data) : 0;
-      const { rateFG, rateIndice } = resolverTaxasCorrecao(p.correcaoTipo, p.outroPct);
-      const baseIndice = valorFinalAnterior === null ? p.valorOriginal : valorFinalAnterior;
+      const usaFG = p.correcaoTipo === 'fg' || p.correcaoTipo.startsWith('fg_');
+      const rateFG = usaFG ? indices.FG/100 : 0;
       const corrFG = p.valorOriginal * rateFG * meses;
-      const corrIndice = baseIndice * rateIndice * meses;
+      const fatorIndice = elegivel ? calcularFatorIndice(p.correcaoTipo, p.outroPct, meses) : 0;
+      const corrIndice = p.valorOriginal * fatorIndice;
       const corrTotal = corrFG + corrIndice;
       p.corrFG = corrFG;
       p.corrIndice = corrIndice;
       p.corrTotal = corrTotal;
       p.valorFinal = p.valorOriginal + corrTotal;
-      valorFinalAnterior = p.valorFinal;
     });
     return parcelas;
   }
@@ -1396,7 +1392,7 @@
 
   function gerarLinhasPlanilha(){
     const rows = [];
-    rows.push(['Nº','Tipo','Vencimento','Valor Original','Correção 0,69%','Correção Índice','Total Correção','Valor Final','Saldo Acumulado']);
+    rows.push(['Nº','Tipo','Vencimento','Valor Original', document.getElementById('thCorrecaoFG').textContent,'Correção Índice','Total Correção','Valor Final','Saldo Acumulado']);
     ultimoCronograma.forEach(p => {
       rows.push([
         p.indiceNoGrupo, p.tipo, formatMonthYear(p.data),
