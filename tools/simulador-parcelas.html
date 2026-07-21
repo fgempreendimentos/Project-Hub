@@ -790,7 +790,8 @@
    * ========================================================= */
 
   // Calcula a correção (juros compostos mensais) de uma parcela conforme o tipo de reajuste escolhido.
-  function aplicarCorrecao(valorOriginal, tipoCorrecao, meses, outroPercentual){
+  // Resolve as taxas mensais (FG e índice) a partir do tipo de correção escolhido.
+  function resolverTaxasCorrecao(tipoCorrecao, outroPercentual){
     let rateFG = 0, rateIndice = 0;
     switch(tipoCorrecao){
       case 'fg': rateFG = indices.FG/100; break;
@@ -804,11 +805,30 @@
       case 'fg_outro': rateFG = indices.FG/100; rateIndice = (outroPercentual||0)/100; break;
       default: break; // 'nenhuma'
     }
-    // Juros compostos mensais, aplicados independentemente a cada taxa.
-    const corrFG = valorOriginal * (Math.pow(1+rateFG, meses) - 1);
-    const corrIndice = valorOriginal * (Math.pow(1+rateIndice, meses) - 1);
-    const corrTotal = corrFG + corrIndice;
-    return { corrFG, corrIndice, corrTotal, valorFinal: valorOriginal + corrTotal };
+    return { rateFG, rateIndice };
+  }
+
+  // Aplica a correção sequencialmente às parcelas de um mesmo grupo (entrada, mensal ou semestral).
+  // 0,69% FG é linear sobre o valor original da própria parcela (valor x taxa x meses).
+  // O índice (IPCA/INPC/IGP-M/outro) incide sobre o valor já corrigido da parcela anterior do
+  // mesmo grupo (ou o valor original, na 1ª parcela), multiplicado pela taxa e pelos meses.
+  function aplicarCorrecaoGrupo(parcelas){
+    let valorFinalAnterior = null;
+    parcelas.forEach(p => {
+      const elegivel = p.indiceNoGrupo >= p.corrigirApartirDe;
+      const meses = elegivel ? monthDiff(p.correcaoAnchorDate, p.data) : 0;
+      const { rateFG, rateIndice } = resolverTaxasCorrecao(p.correcaoTipo, p.outroPct);
+      const baseIndice = valorFinalAnterior === null ? p.valorOriginal : valorFinalAnterior;
+      const corrFG = p.valorOriginal * rateFG * meses;
+      const corrIndice = baseIndice * rateIndice * meses;
+      const corrTotal = corrFG + corrIndice;
+      p.corrFG = corrFG;
+      p.corrIndice = corrIndice;
+      p.corrTotal = corrTotal;
+      p.valorFinal = p.valorOriginal + corrTotal;
+      valorFinalAnterior = p.valorFinal;
+    });
+    return parcelas;
   }
 
   /* =========================================================
@@ -1010,19 +1030,18 @@
   let ultimoCronograma = [];
 
   function gerarTabela(entrada, mensais, semestrais){
+    // A correção por índice depende da parcela anterior do mesmo grupo, então é calculada
+    // sequencialmente dentro de cada grupo antes de mesclar e ordenar o cronograma completo.
+    aplicarCorrecaoGrupo(entrada);
+    aplicarCorrecaoGrupo(mensais);
+    aplicarCorrecaoGrupo(semestrais);
+
     const prioridade = { Entrada:0, Mensal:1, Semestral:2 };
     const todas = [...entrada, ...mensais, ...semestrais];
     todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
 
     let saldo = 0;
     todas.forEach(p => {
-      const elegivelParaCorrecao = p.indiceNoGrupo >= p.corrigirApartirDe;
-      const meses = elegivelParaCorrecao ? monthDiff(p.correcaoAnchorDate, p.data) : 0;
-      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, meses, p.outroPct);
-      p.corrFG = corr.corrFG;
-      p.corrIndice = corr.corrIndice;
-      p.corrTotal = corr.corrTotal;
-      p.valorFinal = corr.valorFinal;
       saldo += p.valorFinal;
       p.saldoAcumulado = saldo;
     });
