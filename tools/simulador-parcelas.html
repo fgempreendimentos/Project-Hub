@@ -804,8 +804,8 @@
       case 'fg_outro': rateFG = indices.FG/100; rateIndice = (outroPercentual||0)/100; break;
       default: break; // 'nenhuma'
     }
-    const corrFG = valorOriginal * (Math.pow(1+rateFG, meses) - 1);
-    const corrIndice = valorOriginal * (Math.pow(1+rateIndice, meses) - 1);
+    const corrFG = valorOriginal * (Math.pow(1+rateFG, meses) - 1); // juros compostos mensais
+    const corrIndice = valorOriginal * rateIndice * meses; // correção linear (valor x meses x percentual)
     const corrTotal = corrFG + corrIndice;
     return { corrFG, corrIndice, corrTotal, valorFinal: valorOriginal + corrTotal };
   }
