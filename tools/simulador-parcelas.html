@@ -13,9 +13,9 @@
     --text: #1c2a3a;
     --text-muted: #66768c;
     --text-faint: #94a3b8;
-    --primary: #1d4d8f;
-    --primary-dark: #123a70;
-    --primary-soft: #e8f0fc;
+    --primary: #0f5b66;
+    --primary-dark: #0c4750;
+    --primary-soft: #e3f0f1;
     --success: #16a34a;
     --success-soft: #eafaf0;
     --danger: #dc2626;
@@ -72,9 +72,11 @@
   }
   .topbar .brand{ display:flex; align-items:center; gap:12px; }
   .brand .logo{
-    width:38px; height:38px; border-radius:9px; background: rgba(255,255,255,.15);
-    display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;
+    width:42px; height:42px; border-radius:9px; background:#ffffff;
+    display:flex; align-items:center; justify-content:center; padding:5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
   }
+  .brand .logo svg{ width:100%; height:100%; display:block; }
   .brand h1{ font-size:16.5px; }
   .brand p{ margin:2px 0 0; font-size:12px; opacity:.8; }
   .actions{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -87,7 +89,7 @@
   .btn-light{ background: rgba(255,255,255,.12); color:#fff; border-color: rgba(255,255,255,.25); }
   .btn-light:hover{ background: rgba(255,255,255,.22); }
   .btn-primary{ background:#fff; color: var(--primary-dark); }
-  .btn-primary:hover{ background:#eaf1fc; }
+  .btn-primary:hover{ background:#d5eaec; }
   .btn-ghost{ background:transparent; color: var(--text-muted); border-color: var(--border); }
   .btn-ghost:hover{ background: var(--surface-alt); }
   .btn-danger-outline{ background:transparent; color:#ffe4e0; border-color: rgba(255,255,255,.3); }
@@ -198,7 +200,7 @@
   table.cronograma tbody tr:hover{ background: var(--surface-alt); }
   table.cronograma tbody tr:nth-child(even){ background: rgba(29,77,143,.02); }
   .tag{ display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
-  .tag-entrada{ background:#e8f0fc; color:var(--primary); }
+  .tag-entrada{ background:#e3f0f1; color:var(--primary); }
   .tag-mensal{ background:#eafaf0; color:var(--success); }
   .tag-semestral{ background:#fef3e2; color:var(--warning); }
   table.cronograma tfoot td{
@@ -233,10 +235,10 @@
 
 <header class="topbar no-print">
   <div class="brand">
-    <div class="logo">FG</div>
+    <div class="logo" id="appLogoMark"></div>
     <div>
       <h1>Simulador de Parcelas</h1>
-      <p>Ferramenta de negociação imobiliária</p>
+      <p>FG Empreendimentos · Ferramenta de negociação imobiliária</p>
     </div>
   </div>
   <div class="actions">
@@ -249,6 +251,7 @@
 </header>
 
 <div class="print-only" style="padding:24px 0 8px;">
+  <div id="printLogoWrap" style="margin-bottom:10px;"></div>
   <h1 style="font-size:20px;">Simulação de Parcelamento — FG Negociação Imobiliária</h1>
   <p style="font-size:12px;color:#666;margin:4px 0 0;" id="printDate"></p>
 </div>
@@ -623,6 +626,50 @@
 <script>
 (function(){
   'use strict';
+
+  /* =========================================================
+   *  LOGOTIPO FG (marca vetorial, sem dependência de arquivo externo)
+   * ========================================================= */
+
+  // Ícone compacto (bandeira + linhas de vento), usado no cabeçalho da aplicação.
+  const FG_MARK_SVG = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FG Empreendimentos">
+    <defs><clipPath id="fgFlagClipMark"><polygon points="58,8 184,42 148,192 12,158"/></clipPath></defs>
+    <polygon points="58,8 184,42 148,192 12,158" fill="#0f5b66"/>
+    <g clip-path="url(#fgFlagClipMark)">
+      <path d="M -10,205 C 60,175 110,150 215,60 L 215,80 C 115,165 65,190 -10,222 Z" fill="#0c4750"/>
+      <g stroke="#ffffff" stroke-width="10" fill="none" stroke-linecap="round">
+        <path d="M -10,205 Q 95,150 210,15"/>
+        <path d="M -10,205 Q 85,168 216,68"/>
+        <path d="M -10,205 Q 70,185 218,118"/>
+      </g>
+    </g>
+  </svg>`;
+
+  // Marca completa (ícone + "FG" + "EMPREENDIMENTOS"), usada no relatório impresso/PDF.
+  const FG_LOGO_FULL_SVG = `<svg viewBox="0 0 700 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FG Empreendimentos" style="height:64px;width:auto;">
+    <defs><clipPath id="fgFlagClipFull"><polygon points="110,20 335,124 255,378 20,314"/></clipPath></defs>
+    <polygon points="110,20 335,124 255,378 20,314" fill="#0f5b66"/>
+    <g clip-path="url(#fgFlagClipFull)">
+      <path d="M -20,405 C 100,340 200,285 400,110 L 400,150 C 210,320 110,375 -20,440 Z" fill="#0c4750"/>
+      <g stroke="#ffffff" stroke-width="18" fill="none" stroke-linecap="round">
+        <path d="M -20,405 Q 170,290 400,30"/>
+        <path d="M -20,405 Q 150,320 410,130"/>
+        <path d="M -20,405 Q 120,355 415,225"/>
+      </g>
+    </g>
+    <text x="400" y="230" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="230" fill="#0f5b66" letter-spacing="-8">FG</text>
+    <text x="90" y="420" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="48" fill="#75787a" letter-spacing="4">EMPREENDIMENTOS</text>
+  </svg>`;
+
+  document.getElementById('appLogoMark').innerHTML = FG_MARK_SVG;
+  document.getElementById('printLogoWrap').innerHTML = FG_LOGO_FULL_SVG;
+
+  const favicon = document.createElement('link');
+  favicon.rel = 'icon';
+  favicon.type = 'image/svg+xml';
+  const faviconSvg = FG_MARK_SVG.replace('<defs>', '<rect width="200" height="200" fill="#ffffff"/><defs>');
+  favicon.href = 'data:image/svg+xml,' + encodeURIComponent(faviconSvg);
+  document.head.appendChild(favicon);
 
   /* =========================================================
    *  UTILITÁRIOS DE DATA
@@ -1170,11 +1217,13 @@
       <title>Simulação de Parcelas — Relatório</title>
       <style>
         body{ font-family: Arial, sans-serif; color:#1c2a3a; padding:28px; }
+        .report-header{ display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+        .report-header svg{ height:56px; width:auto; flex-shrink:0; }
         h1{ font-size:20px; margin:0 0 4px; }
         p.sub{ color:#666; font-size:12px; margin:0 0 20px; }
         table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:18px; }
         th,td{ border:1px solid #dde3ec; padding:7px 9px; text-align:right; }
-        th{ background:#123a70; color:#fff; }
+        th{ background:#0c4750; color:#fff; }
         th:nth-child(-n+2), td:nth-child(-n+2){ text-align:left; }
         tfoot td{ font-weight:bold; background:#f6f8fb; }
         .card{ border:1px solid #dde3ec; border-radius:8px; padding:14px 18px; max-width:420px; }
@@ -1184,13 +1233,18 @@
         .status-badge.ok{ background:#eafaf0; color:#16a34a; }
         .status-badge.bad{ background:#fdecec; color:#dc2626; }
         .tag{ padding:2px 8px; border-radius:20px; font-size:10px; font-weight:bold; }
-        .tag-entrada{ background:#e8f0fc; color:#1d4d8f; }
+        .tag-entrada{ background:#e3f0f1; color:#0f5b66; }
         .tag-mensal{ background:#eafaf0; color:#16a34a; }
         .tag-semestral{ background:#fef3e2; color:#b45309; }
       </style></head>
       <body>
-        <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
-        <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        <div class="report-header">
+          ${FG_LOGO_FULL_SVG}
+          <div>
+            <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
+            <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+          </div>
+        </div>
         ${resumoHtml}
         ${tabelaHtml}
         ${emptyHtml}
