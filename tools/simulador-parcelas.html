@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simulador de Parcelas — FG Negociação Imobiliária</title>
+<style>
+  :root{
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --surface-alt: #f6f8fb;
+    --border: #dde3ec;
+    --text: #1c2a3a;
+    --text-muted: #66768c;
+    --text-faint: #94a3b8;
+    --primary: #1d4d8f;
+    --primary-dark: #123a70;
+    --primary-soft: #e8f0fc;
+    --success: #16a34a;
+    --success-soft: #eafaf0;
+    --danger: #dc2626;
+    --danger-soft: #fdecec;
+    --warning: #b45309;
+    --warning-soft: #fef3e2;
+    --radius: 12px;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+    --shadow-md: 0 4px 10px rgba(16,24,40,.08), 0 1px 3px rgba(16,24,40,.06);
+  }
+  * { box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: -apple-system, "Segoe UI", Roboto, Inter, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,h2,h3,h4{ margin:0; font-weight:600; }
+  label{ font-size:12.5px; font-weight:600; color: var(--text-muted); display:block; margin-bottom:6px; letter-spacing:.01em; }
+  input, select{
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus{
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  input[disabled], input[readonly]{
+    background: var(--surface-alt);
+    color: var(--text-muted);
+  }
+  input[type="checkbox"]{ width:auto; accent-color: var(--primary); }
+  input[type="radio"]{ accent-color: var(--primary); }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position: sticky; top:0; z-index:50;
+    background: linear-gradient(180deg, var(--primary-dark), var(--primary));
+    color:#fff;
+    padding: 14px 24px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    box-shadow: var(--shadow-md);
+    flex-wrap: wrap;
+  }
+  .topbar .brand{ display:flex; align-items:center; gap:12px; }
+  .brand .logo{
+    width:38px; height:38px; border-radius:9px; background: rgba(255,255,255,.15);
+    display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;
+  }
+  .brand h1{ font-size:16.5px; }
+  .brand p{ margin:2px 0 0; font-size:12px; opacity:.8; }
+  .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn{
+    appearance:none; border:1px solid transparent; cursor:pointer;
+    padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight:600;
+    display:inline-flex; align-items:center; gap:7px; transition:.15s;
+    white-space:nowrap;
+  }
+  .btn-light{ background: rgba(255,255,255,.12); color:#fff; border-color: rgba(255,255,255,.25); }
+  .btn-light:hover{ background: rgba(255,255,255,.22); }
+  .btn-primary{ background:#fff; color: var(--primary-dark); }
+  .btn-primary:hover{ background:#eaf1fc; }
+  .btn-ghost{ background:transparent; color: var(--text-muted); border-color: var(--border); }
+  .btn-ghost:hover{ background: var(--surface-alt); }
+  .btn-danger-outline{ background:transparent; color:#ffe4e0; border-color: rgba(255,255,255,.3); }
+  .btn-danger-outline:hover{ background: rgba(255,255,255,.15); }
+
+  /* ---------- Layout ---------- */
+  main{ max-width: 1440px; margin: 0 auto; padding: 22px 24px 60px; }
+  .grid-top{
+    display:grid; grid-template-columns: 1fr 360px; gap:20px; align-items:start;
+  }
+  .col-main{ display:flex; flex-direction:column; gap:18px; min-width:0; }
+  .col-side{ display:flex; flex-direction:column; gap:18px; position:sticky; top:88px; }
+
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    overflow:hidden;
+    animation: fadeIn .25s ease;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+  .card-head{
+    padding: 15px 20px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: var(--surface-alt);
+  }
+  .card-head h2{ font-size:14.5px; display:flex; align-items:center; gap:9px; }
+  .card-head .icon{
+    width:26px; height:26px; border-radius:7px; background:var(--primary-soft); color:var(--primary);
+    display:flex; align-items:center; justify-content:center; font-size:13px;
+  }
+  .card-body{ padding: 18px 20px 20px; }
+  .card-body.compact{ padding: 14px 18px 16px; }
+
+  .field-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 14px; margin-bottom: 14px; }
+  .field-row:last-child{ margin-bottom:0; }
+  .field{ min-width:0; }
+  .field.span-2{ grid-column: span 2; }
+  .hint{ font-size:11.5px; color:var(--text-faint); margin-top:5px; }
+
+  .money-field{ position:relative; }
+  .money-field .prefix{
+    position:absolute; left:11px; top:50%; transform:translateY(-50%);
+    font-size:13px; color:var(--text-muted); font-weight:600; pointer-events:none;
+  }
+  .money-field input{ padding-left:34px; text-align:right; font-variant-numeric: tabular-nums; }
+
+  .radio-group{ display:flex; gap:16px; flex-wrap:wrap; padding: 4px 0 2px; }
+  .radio-opt{ display:flex; align-items:center; gap:7px; font-size:13.5px; color:var(--text); cursor:pointer; font-weight:500; }
+  .check-opt{ display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:600; color:var(--text); cursor:pointer; }
+
+  .divider{ height:1px; background:var(--border); margin: 16px 0; }
+  .section-label{ font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+
+  .readout-strip{
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap:12px;
+    background: var(--surface-alt); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-top:16px;
+  }
+  .readout-strip .item .k{ font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.03em; }
+  .readout-strip .item .v{ font-size:16px; font-weight:700; margin-top:4px; font-variant-numeric: tabular-nums; }
+  .readout-strip .item .v.accent{ color: var(--primary); }
+  .readout-strip .item .v.ok{ color: var(--success); }
+  .readout-strip .item .v.bad{ color: var(--danger); }
+
+  fieldset{ border:none; padding:0; margin:0; }
+  fieldset[disabled] { opacity:.45; pointer-events:none; }
+
+  .disabled-panel{ opacity:.4; pointer-events:none; filter: grayscale(.3); }
+
+  /* ---------- Resumo (sidebar) ---------- */
+  .resumo-list{ display:flex; flex-direction:column; gap:0; }
+  .resumo-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 10px 0; border-bottom: 1px dashed var(--border); font-size:13.5px;
+  }
+  .resumo-row:last-of-type{ border-bottom:none; }
+  .resumo-row .lbl{ color:var(--text-muted); font-weight:500; }
+  .resumo-row .val{ font-weight:700; font-variant-numeric: tabular-nums; }
+  .resumo-row.total .lbl, .resumo-row.total .val{ color:var(--primary); font-size:14.5px; }
+
+  .status-badge{
+    margin-top:14px; padding: 13px 14px; border-radius:10px; font-size:13.5px; font-weight:700;
+    display:flex; align-items:center; gap:9px; transition: all .2s;
+  }
+  .status-badge.ok{ background: var(--success-soft); color: var(--success); border:1px solid #bfe8cf; }
+  .status-badge.bad{ background: var(--danger-soft); color: var(--danger); border:1px solid #f5c6c2; }
+
+  /* ---------- Indices card ---------- */
+  .idx-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .idx-item label{ margin-bottom:5px; }
+  .pct-field{ position:relative; }
+  .pct-field input{ padding-right: 28px; text-align:right; }
+  .pct-field .suffix{ position:absolute; right:11px; top:50%; transform:translateY(-50%); font-size:12.5px; color:var(--text-muted); font-weight:600; }
+
+  /* ---------- Cronograma table ---------- */
+  .table-scroll{ overflow-x:auto; }
+  table.cronograma{ width:100%; border-collapse:collapse; font-size:13px; min-width: 920px; }
+  table.cronograma thead th{
+    background: var(--primary-dark); color:#fff; text-align:right; padding:11px 12px;
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.03em; font-weight:700; white-space:nowrap;
+  }
+  table.cronograma thead th:nth-child(-n+2){ text-align:left; }
+  table.cronograma thead th:nth-child(3){ text-align:center; }
+  table.cronograma tbody td{ padding:9px 12px; border-bottom:1px solid var(--border); text-align:right; font-variant-numeric: tabular-nums; white-space:nowrap; }
+  table.cronograma tbody td:nth-child(-n+2){ text-align:left; }
+  table.cronograma tbody td:nth-child(3){ text-align:center; }
+  table.cronograma tbody tr:hover{ background: var(--surface-alt); }
+  table.cronograma tbody tr:nth-child(even){ background: rgba(29,77,143,.02); }
+  .tag{ display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
+  .tag-entrada{ background:#e8f0fc; color:var(--primary); }
+  .tag-mensal{ background:#eafaf0; color:var(--success); }
+  .tag-semestral{ background:#fef3e2; color:var(--warning); }
+  table.cronograma tfoot td{
+    padding:12px; font-weight:700; background: var(--surface-alt); border-top:2px solid var(--border);
+    text-align:right; white-space:nowrap;
+  }
+  table.cronograma tfoot td:first-child{ text-align:left; }
+  .empty-state{ padding: 34px 20px; text-align:center; color:var(--text-faint); font-size:13.5px; }
+
+  .cronograma-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+
+  footer.app-footer{ text-align:center; padding: 24px 0 10px; font-size:12px; color:var(--text-faint); }
+
+  @media (max-width: 980px){
+    .grid-top{ grid-template-columns: 1fr; }
+    .col-side{ position:static; }
+  }
+
+  /* ---------- Print ---------- */
+  @media print{
+    .no-print{ display:none !important; }
+    body{ background:#fff; }
+    main{ max-width:none; padding:0; margin:0; }
+    .card{ box-shadow:none; border:1px solid #ccc; break-inside: avoid; }
+    .grid-top{ display:none !important; }
+    .print-only{ display:block !important; }
+  }
+  .print-only{ display:none; }
+</style>
+</head>
+<body>
+
+<header class="topbar no-print">
+  <div class="brand">
+    <div class="logo">FG</div>
+    <div>
+      <h1>Simulador de Parcelas</h1>
+      <p>Ferramenta de negociação imobiliária</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-light" id="btnNovo" type="button">＋ Novo cálculo</button>
+    <button class="btn btn-danger-outline" id="btnLimpar" type="button">Limpar</button>
+    <button class="btn btn-light" id="btnExcel" type="button">⬇ Excel (.xlsx)</button>
+    <button class="btn btn-light" id="btnPdf" type="button">⬇ PDF</button>
+    <button class="btn btn-primary" id="btnImprimir" type="button">🖶 Imprimir</button>
+  </div>
+</header>
+
+<div class="print-only" style="padding:24px 0 8px;">
+  <h1 style="font-size:20px;">Simulação de Parcelamento — FG Negociação Imobiliária</h1>
+  <p style="font-size:12px;color:#666;margin:4px 0 0;" id="printDate"></p>
+</div>
+
+<main id="formArea">
+  <div class="grid-top">
+
+    <!-- ================= COLUNA PRINCIPAL ================= -->
+    <section class="col-main">
+
+      <!-- Dados do Contrato -->
+      <div class="card" id="cardContrato">
+        <div class="card-head"><h2><span class="icon">📄</span> Dados do Contrato</h2></div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field">
+              <label for="inpContratoTotal">Valor total do contrato</label>
+              <div class="money-field"><span class="prefix">R$</span>
+                <input type="text" inputmode="numeric" class="money-input" id="inpContratoTotal" value="0,00">
+              </div>
+            </div>
+            <div class="field">
+              <label for="inpContratoData">Data da assinatura do contrato</label>
+              <input type="date" id="inpContratoData">
+            </div>
+            <div class="field">
+              <label>Valor financiado <span style="font-weight:400;">(automático)</span></label>
+              <div class="readout-strip" style="grid-template-columns:1fr; padding:9px 12px; margin-top:0;">
+                <div class="item"><div class="v accent" id="outFinanciado">R$ 0,00</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="readout-strip" id="resumoLive">
+            <div class="item"><div class="k">Total da entrada</div><div class="v" id="outTotalEntrada">R$ 0,00</div></div>
+            <div class="item"><div class="k">Soma das parcelas</div><div class="v" id="outSomaParcelas">R$ 0,00</div></div>
+            <div class="item"><div class="k">Total geral (nominal)</div><div class="v" id="outTotalGeral">R$ 0,00</div></div>
+            <div class="item"><div class="k">Diferença p/ contrato</div><div class="v" id="outDiferenca">R$ 0,00</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Entrada -->
+      <div class="card" id="cardEntrada">
+        <div class="card-head"><h2><span class="icon">💰</span> Entrada</h2></div>
+        <div class="card-body">
+          <div class="radio-group">
+            <label class="radio-opt"><input type="radio" name="entradaTipo" value="avista" checked> À vista</label>
+            <label class="radio-opt"><input type="radio" name="entradaTipo" value="parcelada"> Parcelada</label>
+          </div>
+
+          <div class="divider"></div>
+
+          <div id="entradaAvistaFields">
+            <div class="field-row">
+              <div class="field">
+                <label for="inpEntradaAvistaValor">Valor da entrada</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpEntradaAvistaValor" value="0,00">
+                </div>
+              </div>
+              <div class="field">
+                <label for="inpEntradaAvistaData">Data de pagamento</label>
+                <input type="date" id="inpEntradaAvistaData">
+              </div>
+            </div>
+          </div>
+
+          <div id="entradaParceladaFields" style="display:none;">
+            <div class="field-row">
+              <div class="field">
+                <label for="inpEntradaQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpEntradaQtd" value="3">
+              </div>
+              <div class="field">
+                <label for="inpEntradaData">Data da 1ª parcela</label>
+                <input type="date" id="inpEntradaData">
+              </div>
+            </div>
+
+            <div class="radio-group">
+              <label class="radio-opt"><input type="radio" name="entradaModoValor" value="total" checked> Informar valor total da entrada</label>
+              <label class="radio-opt"><input type="radio" name="entradaModoValor" value="parcela"> Informar valor de cada parcela</label>
+            </div>
+
+            <div class="field-row" style="margin-top:12px;">
+              <div class="field">
+                <label for="inpEntradaValorTotal">Valor total da entrada</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpEntradaValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field">
+                <label for="inpEntradaValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpEntradaValorParcela" value="0,00" readonly>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="section-label">Correção da entrada</div>
+          <div class="field-row">
+            <div class="field">
+              <label for="selCorrecaoEntrada">Índice de reajuste</label>
+              <select id="selCorrecaoEntrada">
+                <option value="nenhuma">Sem reajuste</option>
+                <option value="fg">0,69% ao mês (Padrão FG)</option>
+                <option value="ipca">IPCA</option>
+                <option value="inpc">INPC</option>
+                <option value="igpm">IGP-M</option>
+                <option value="outro">Outro índice (informar %)</option>
+                <option value="fg_ipca">0,69% + IPCA</option>
+                <option value="fg_inpc">0,69% + INPC</option>
+                <option value="fg_igpm">0,69% + IGP-M</option>
+                <option value="fg_outro">0,69% + Outro índice</option>
+              </select>
+            </div>
+            <div class="field" id="outroEntradaWrap" style="display:none;">
+              <label for="inpOutroEntrada">Percentual do outro índice (a.m.)</label>
+              <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroEntrada" value="0"><span class="suffix">%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parcelas Mensais -->
+      <div class="card" id="cardMensais">
+        <div class="card-head">
+          <h2><span class="icon">📅</span> Parcelas Mensais</h2>
+          <label class="check-opt"><input type="checkbox" id="chkMensaisHabilitado" checked> Habilitar</label>
+        </div>
+        <div class="card-body">
+          <fieldset id="mensaisFieldset">
+            <div class="field-row">
+              <div class="field">
+                <label for="selMensaisModo">Definir por</label>
+                <select id="selMensaisModo">
+                  <option value="qtd_total">Quantidade + valor total</option>
+                  <option value="qtd_parcela">Quantidade + valor da parcela</option>
+                  <option value="total_parcela">Valor total + valor da parcela</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpMensaisData">1º vencimento</label>
+                <input type="date" id="inpMensaisData">
+              </div>
+              <div class="field">
+                <label>Periodicidade</label>
+                <input type="text" value="Mensal" disabled>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field" id="mensaisQtdWrap">
+                <label for="inpMensaisQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpMensaisQtd" value="12">
+              </div>
+              <div class="field" id="mensaisTotalWrap">
+                <label for="inpMensaisValorTotal">Valor total destinado às mensais</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpMensaisValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field" id="mensaisParcelaWrap" style="display:none;">
+                <label for="inpMensaisValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpMensaisValorParcela" value="0,00">
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Correção das mensais</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="selCorrecaoMensais">Índice de reajuste</label>
+                <select id="selCorrecaoMensais">
+                  <option value="nenhuma">Sem reajuste</option>
+                  <option value="fg">0,69% ao mês (Padrão FG)</option>
+                  <option value="ipca">IPCA</option>
+                  <option value="inpc">INPC</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="outro">Outro índice (informar %)</option>
+                  <option value="fg_ipca">0,69% + IPCA</option>
+                  <option value="fg_inpc">0,69% + INPC</option>
+                  <option value="fg_igpm">0,69% + IGP-M</option>
+                  <option value="fg_outro">0,69% + Outro índice</option>
+                </select>
+              </div>
+              <div class="field" id="outroMensaisWrap" style="display:none;">
+                <label for="inpOutroMensais">Percentual do outro índice (a.m.)</label>
+                <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroMensais" value="0"><span class="suffix">%</span></div>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- Parcelas Semestrais -->
+      <div class="card" id="cardSemestrais">
+        <div class="card-head">
+          <h2><span class="icon">🗓</span> Parcelas Semestrais</h2>
+          <label class="check-opt"><input type="checkbox" id="chkSemestraisHabilitado"> Habilitar</label>
+        </div>
+        <div class="card-body">
+          <fieldset id="semestraisFieldset" disabled>
+            <div class="field-row">
+              <div class="field">
+                <label for="selSemestraisModo">Definir por</label>
+                <select id="selSemestraisModo">
+                  <option value="qtd_total">Quantidade + valor total</option>
+                  <option value="qtd_parcela">Quantidade + valor da parcela</option>
+                  <option value="total_parcela">Valor total + valor da parcela</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpSemestraisData">1º vencimento</label>
+                <input type="date" id="inpSemestraisData">
+              </div>
+              <div class="field">
+                <label>Periodicidade</label>
+                <input type="text" value="Semestral (6 em 6 meses)" disabled>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field" id="semestraisQtdWrap">
+                <label for="inpSemestraisQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpSemestraisQtd" value="2">
+              </div>
+              <div class="field" id="semestraisTotalWrap">
+                <label for="inpSemestraisValorTotal">Valor total destinado às semestrais</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpSemestraisValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field" id="semestraisParcelaWrap" style="display:none;">
+                <label for="inpSemestraisValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpSemestraisValorParcela" value="0,00">
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Correção das semestrais</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="selCorrecaoSemestrais">Índice de reajuste</label>
+                <select id="selCorrecaoSemestrais">
+                  <option value="nenhuma">Sem reajuste</option>
+                  <option value="fg">0,69% ao mês (Padrão FG)</option>
+                  <option value="ipca">IPCA</option>
+                  <option value="inpc">INPC</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="outro">Outro índice (informar %)</option>
+                  <option value="fg_ipca">0,69% + IPCA</option>
+                  <option value="fg_inpc">0,69% + INPC</option>
+                  <option value="fg_igpm">0,69% + IGP-M</option>
+                  <option value="fg_outro">0,69% + Outro índice</option>
+                </select>
+              </div>
+              <div class="field" id="outroSemestraisWrap" style="display:none;">
+                <label for="inpOutroSemestrais">Percentual do outro índice (a.m.)</label>
+                <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroSemestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= COLUNA LATERAL ================= -->
+    <aside class="col-side no-print">
+
+      <div class="card" id="cardResumo">
+        <div class="card-head"><h2><span class="icon">📊</span> Resumo Financeiro</h2></div>
+        <div class="card-body compact">
+          <div class="resumo-list">
+            <div class="resumo-row"><span class="lbl">Valor do contrato</span><span class="val" id="resValorContrato">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Entrada</span><span class="val" id="resEntrada">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Mensais</span><span class="val" id="resMensais">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Semestrais</span><span class="val" id="resSemestrais">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Valor financiado</span><span class="val" id="resFinanciado">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Total das correções</span><span class="val" id="resCorrecoes">R$ 0,00</span></div>
+            <div class="resumo-row total"><span class="lbl">Total corrigido</span><span class="val" id="resTotalCorrigido">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Diferença p/ contrato</span><span class="val" id="resDiferenca">R$ 0,00</span></div>
+          </div>
+          <div class="status-badge ok" id="statusBadge">✓ Simulação Fechada</div>
+        </div>
+      </div>
+
+      <div class="card no-print" id="cardIndices">
+        <div class="card-head"><h2><span class="icon">⚙️</span> Configuração de Índices</h2></div>
+        <div class="card-body compact">
+          <p class="hint" style="margin:0 0 12px;">Percentuais mensais (%). Atualize aqui quando novos índices forem divulgados.</p>
+          <div class="idx-grid">
+            <div class="idx-item">
+              <label for="idxFG">FG (padrão)</label>
+              <div class="pct-field"><input type="number" step="0.0001" id="idxFG" value="0.69"><span class="suffix">%</span></div>
+            </div>
+            <div class="idx-item">
+              <label for="idxIPCA">IPCA</label>
+              <div class="pct-field"><input type="number" step="0.0001" id="idxIPCA" value="0"><span class="suffix">%</span></div>
+            </div>
+            <div class="idx-item">
+              <label for="idxINPC">INPC</label>
+              <div class="pct-field"><input type="number" step="0.0001" id="idxINPC" value="0"><span class="suffix">%</span></div>
+            </div>
+            <div class="idx-item">
+              <label for="idxIGPM">IGP-M</label>
+              <div class="pct-field"><input type="number" step="0.0001" id="idxIGPM" value="0"><span class="suffix">%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- ================= CRONOGRAMA ================= -->
+  <div class="card" id="cardCronograma" style="margin-top:20px;">
+    <div class="card-head cronograma-head">
+      <h2><span class="icon">📋</span> Cronograma Financeiro</h2>
+      <span class="hint" style="margin:0;">Ordenado por data de vencimento</span>
+    </div>
+    <div class="card-body compact">
+      <div class="table-scroll">
+        <table class="cronograma" id="tabelaCronograma">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Tipo</th>
+              <th>Vencimento</th>
+              <th>Valor Original</th>
+              <th>Correção 0,69%</th>
+              <th>Correção Índice</th>
+              <th>Total Correção</th>
+              <th>Valor Final</th>
+              <th>Saldo Acumulado</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyCronograma"></tbody>
+          <tfoot id="tfootCronograma"></tfoot>
+        </table>
+      </div>
+      <div class="empty-state" id="emptyState">Preencha os dados do contrato para gerar o cronograma.</div>
+    </div>
+  </div>
+</main>
+
+<footer class="app-footer no-print">Simulador de Parcelas · Uso interno FG · Os valores gerados são estimativas para negociação e não substituem o contrato oficial.</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =========================================================
+   *  UTILITÁRIOS DE DATA
+   * ========================================================= */
+
+  // Converte uma string "yyyy-mm-dd" (input[type=date]) em Date local, sem deslocamento de fuso.
+  function parseDateInput(str){
+    if(!str) return new Date();
+    const [y,m,d] = str.split('-').map(Number);
+    return new Date(y, (m||1)-1, d||1);
+  }
+
+  // Retorna uma string yyyy-mm-dd a partir de um Date, em horário local.
+  function toISODate(date){
+    const y = date.getFullYear();
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    const d = String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function formatDateBR(date){
+    const d = String(date.getDate()).padStart(2,'0');
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    return `${d}/${m}/${date.getFullYear()}`;
+  }
+
+  function formatMonthYear(date){
+    const m = String(date.getMonth()+1).padStart(2,'0');
+    return `${m}/${date.getFullYear()}`;
+  }
+
+  // Soma "n" meses a uma data, preservando o dia quando possível (ajusta para o último dia do mês destino).
+  function addMonths(date, n){
+    const day = date.getDate();
+    const d = new Date(date.getFullYear(), date.getMonth()+n, 1);
+    const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+    d.setDate(Math.min(day, lastDay));
+    return d;
+  }
+
+  // Quantidade de meses de calendário entre duas datas (nunca negativo).
+  function monthDiff(dataInicial, dataFinal){
+    const meses = (dataFinal.getFullYear()-dataInicial.getFullYear())*12 + (dataFinal.getMonth()-dataInicial.getMonth());
+    return Math.max(0, meses);
+  }
+
+  /* =========================================================
+   *  UTILITÁRIOS MONETÁRIOS
+   * ========================================================= */
+
+  function formatMoneyPlain(v){
+    return (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function formatMoneyBRL(v){
+    const sinal = v < -0.004 ? '-' : '';
+    return `${sinal}R$ ${formatMoneyPlain(Math.abs(v))}`;
+  }
+
+  // Divide um total em "n" parcelas cujo somatório bate exatamente com o total (resto absorvido pela última parcela).
+  function distribuirValor(total, n){
+    n = Math.max(1, n);
+    const centavosTotal = Math.round((total||0)*100);
+    const base = Math.floor(centavosTotal/n);
+    const resto = centavosTotal - base*n;
+    const arr = [];
+    for(let i=0;i<n;i++){
+      arr.push((i === n-1 ? base+resto : base)/100);
+    }
+    return arr;
+  }
+
+  function getMoneyValue(el){
+    return parseFloat(el.dataset.value || '0') || 0;
+  }
+  function setMoneyValue(el, num){
+    num = Number.isFinite(num) ? num : 0;
+    el.value = formatMoneyPlain(num);
+    el.dataset.value = String(num);
+  }
+
+  function attachMoneyMask(el){
+    setMoneyValue(el, getMoneyValue(el));
+    el.addEventListener('input', () => {
+      const digits = el.value.replace(/\D/g,'');
+      const num = (digits ? parseInt(digits,10) : 0) / 100;
+      setMoneyValue(el, num);
+    });
+  }
+
+  document.querySelectorAll('.money-input').forEach(attachMoneyMask);
+
+  /* =========================================================
+   *  CONFIGURAÇÃO DE ÍNDICES (editável na UI, fácil de ajustar)
+   * ========================================================= */
+
+  // Objeto central de índices — percentuais mensais. Atualize os valores (ou via UI) quando novos índices saírem.
+  const indices = { FG: 0.69, IPCA: 0, INPC: 0, IGPM: 0 };
+
+  function lerIndices(){
+    indices.FG = parseFloat(document.getElementById('idxFG').value) || 0;
+    indices.IPCA = parseFloat(document.getElementById('idxIPCA').value) || 0;
+    indices.INPC = parseFloat(document.getElementById('idxINPC').value) || 0;
+    indices.IGPM = parseFloat(document.getElementById('idxIGPM').value) || 0;
+  }
+
+  /* =========================================================
+   *  APLICAÇÃO DE CORREÇÃO
+   * ========================================================= */
+
+  // Calcula a correção (juros compostos mensais) de uma parcela conforme o tipo de reajuste escolhido.
+  function aplicarCorrecao(valorOriginal, tipoCorrecao, meses, outroPercentual){
+    let rateFG = 0, rateIndice = 0;
+    switch(tipoCorrecao){
+      case 'fg': rateFG = indices.FG/100; break;
+      case 'ipca': rateIndice = indices.IPCA/100; break;
+      case 'inpc': rateIndice = indices.INPC/100; break;
+      case 'igpm': rateIndice = indices.IGPM/100; break;
+      case 'outro': rateIndice = (outroPercentual||0)/100; break;
+      case 'fg_ipca': rateFG = indices.FG/100; rateIndice = indices.IPCA/100; break;
+      case 'fg_inpc': rateFG = indices.FG/100; rateIndice = indices.INPC/100; break;
+      case 'fg_igpm': rateFG = indices.FG/100; rateIndice = indices.IGPM/100; break;
+      case 'fg_outro': rateFG = indices.FG/100; rateIndice = (outroPercentual||0)/100; break;
+      default: break; // 'nenhuma'
+    }
+    const corrFG = valorOriginal * (Math.pow(1+rateFG, meses) - 1);
+    const corrIndice = valorOriginal * (Math.pow(1+rateIndice, meses) - 1);
+    const corrTotal = corrFG + corrIndice;
+    return { corrFG, corrIndice, corrTotal, valorFinal: valorOriginal + corrTotal };
+  }
+
+  /* =========================================================
+   *  LEITURA / SINCRONIZAÇÃO DE CAMPOS CONDICIONAIS
+   * ========================================================= */
+
+  function atualizarCamposDependentes(){
+    const tipoEntrada = document.querySelector('input[name="entradaTipo"]:checked').value;
+    document.getElementById('entradaAvistaFields').style.display = tipoEntrada === 'avista' ? '' : 'none';
+    document.getElementById('entradaParceladaFields').style.display = tipoEntrada === 'parcelada' ? '' : 'none';
+
+    if(tipoEntrada === 'parcelada'){
+      const modo = document.querySelector('input[name="entradaModoValor"]:checked').value;
+      const inpTotal = document.getElementById('inpEntradaValorTotal');
+      const inpParcela = document.getElementById('inpEntradaValorParcela');
+      inpTotal.readOnly = modo !== 'total';
+      inpParcela.readOnly = modo !== 'parcela';
+    }
+
+    const corrEntrada = document.getElementById('selCorrecaoEntrada').value;
+    document.getElementById('outroEntradaWrap').style.display = (corrEntrada==='outro'||corrEntrada==='fg_outro') ? '' : 'none';
+
+    const mensaisOn = document.getElementById('chkMensaisHabilitado').checked;
+    document.getElementById('mensaisFieldset').disabled = !mensaisOn;
+    const modoMensais = document.getElementById('selMensaisModo').value;
+    document.getElementById('mensaisQtdWrap').style.display = modoMensais.startsWith('qtd') ? '' : 'none';
+    document.getElementById('mensaisTotalWrap').style.display = (modoMensais==='qtd_total'||modoMensais==='total_parcela') ? '' : 'none';
+    document.getElementById('mensaisParcelaWrap').style.display = (modoMensais==='qtd_parcela'||modoMensais==='total_parcela') ? '' : 'none';
+    const corrMensais = document.getElementById('selCorrecaoMensais').value;
+    document.getElementById('outroMensaisWrap').style.display = (corrMensais==='outro'||corrMensais==='fg_outro') ? '' : 'none';
+
+    const semestraisOn = document.getElementById('chkSemestraisHabilitado').checked;
+    document.getElementById('semestraisFieldset').disabled = !semestraisOn;
+    const modoSemestrais = document.getElementById('selSemestraisModo').value;
+    document.getElementById('semestraisQtdWrap').style.display = modoSemestrais.startsWith('qtd') ? '' : 'none';
+    document.getElementById('semestraisTotalWrap').style.display = (modoSemestrais==='qtd_total'||modoSemestrais==='total_parcela') ? '' : 'none';
+    document.getElementById('semestraisParcelaWrap').style.display = (modoSemestrais==='qtd_parcela'||modoSemestrais==='total_parcela') ? '' : 'none';
+    const corrSemestrais = document.getElementById('selCorrecaoSemestrais').value;
+    document.getElementById('outroSemestraisWrap').style.display = (corrSemestrais==='outro'||corrSemestrais==='fg_outro') ? '' : 'none';
+  }
+
+  /* =========================================================
+   *  CÁLCULO DA ENTRADA
+   * ========================================================= */
+
+  function calcularEntrada(dataAssinatura){
+    const tipo = document.querySelector('input[name="entradaTipo"]:checked').value;
+    const correcaoTipo = document.getElementById('selCorrecaoEntrada').value;
+    const outroPct = parseFloat(document.getElementById('inpOutroEntrada').value) || 0;
+    const parcelas = [];
+
+    if(tipo === 'avista'){
+      const dataStr = document.getElementById('inpEntradaAvistaData').value;
+      const data = dataStr ? parseDateInput(dataStr) : dataAssinatura;
+      const valor = getMoneyValue(document.getElementById('inpEntradaAvistaValor'));
+      parcelas.push({ data, valorOriginal: valor });
+    } else {
+      const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
+      const dataStr = document.getElementById('inpEntradaData').value;
+      const dataInicial = dataStr ? parseDateInput(dataStr) : dataAssinatura;
+      const modo = document.querySelector('input[name="entradaModoValor"]:checked').value;
+      let valores;
+      if(modo === 'total'){
+        const total = getMoneyValue(document.getElementById('inpEntradaValorTotal'));
+        valores = distribuirValor(total, qtd);
+        setMoneyValue(document.getElementById('inpEntradaValorParcela'), valores[0]);
+      } else {
+        const parcela = getMoneyValue(document.getElementById('inpEntradaValorParcela'));
+        valores = new Array(qtd).fill(parcela);
+        setMoneyValue(document.getElementById('inpEntradaValorTotal'), parcela*qtd);
+      }
+      for(let i=0;i<qtd;i++){
+        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i] });
+      }
+    }
+
+    parcelas.forEach(p => { p.tipo = 'Entrada'; p.correcaoTipo = correcaoTipo; p.outroPct = outroPct; });
+    return parcelas;
+  }
+
+  /* =========================================================
+   *  CÁLCULO DE UM GRUPO PERIÓDICO (mensal ou semestral)
+   * ========================================================= */
+
+  function calcularGrupoPeriodico(prefixo, tipoLabel, passoMeses, dataAssinatura){
+    const habilitado = document.getElementById(`chk${prefixo}Habilitado`).checked;
+    if(!habilitado) return [];
+
+    const modo = document.getElementById(`sel${prefixo}Modo`).value;
+    const qtdEl = document.getElementById(`inp${prefixo}Qtd`);
+    const totalEl = document.getElementById(`inp${prefixo}ValorTotal`);
+    const parcelaEl = document.getElementById(`inp${prefixo}ValorParcela`);
+    const dataStr = document.getElementById(`inp${prefixo}Data`).value;
+    const dataInicial = dataStr ? parseDateInput(dataStr) : dataAssinatura;
+
+    let qtd, valores;
+    if(modo === 'qtd_total'){
+      qtd = Math.max(1, parseInt(qtdEl.value,10) || 1);
+      const total = getMoneyValue(totalEl);
+      valores = distribuirValor(total, qtd);
+      setMoneyValue(parcelaEl, valores[0]);
+    } else if(modo === 'qtd_parcela'){
+      qtd = Math.max(1, parseInt(qtdEl.value,10) || 1);
+      const parcela = getMoneyValue(parcelaEl);
+      valores = new Array(qtd).fill(parcela);
+      setMoneyValue(totalEl, parcela*qtd);
+    } else { // total_parcela -> quantidade calculada automaticamente
+      const total = getMoneyValue(totalEl);
+      const parcela = getMoneyValue(parcelaEl);
+      qtd = parcela > 0 ? Math.max(1, Math.ceil(total/parcela)) : 0;
+      qtdEl.value = qtd;
+      valores = qtd > 0 ? distribuirValor(total, qtd) : [];
+    }
+
+    if(qtd <= 0) return [];
+
+    const correcaoTipo = document.getElementById(`selCorrecao${prefixo}`).value;
+    const outroPct = parseFloat(document.getElementById(`inpOutro${prefixo}`).value) || 0;
+    const parcelas = [];
+    for(let i=0;i<qtd;i++){
+      parcelas.push({
+        tipo: tipoLabel,
+        data: addMonths(dataInicial, i*passoMeses),
+        valorOriginal: valores[i],
+        correcaoTipo, outroPct
+      });
+    }
+    return parcelas;
+  }
+
+  function calcularMensais(dataAssinatura){
+    return calcularGrupoPeriodico('Mensais', 'Mensal', 1, dataAssinatura);
+  }
+  function calcularSemestrais(dataAssinatura){
+    return calcularGrupoPeriodico('Semestrais', 'Semestral', 6, dataAssinatura);
+  }
+
+  /* =========================================================
+   *  GERAÇÃO DA TABELA / CRONOGRAMA
+   * ========================================================= */
+
+  let ultimoCronograma = [];
+
+  function gerarTabela(entrada, mensais, semestrais, dataAssinatura){
+    const prioridade = { Entrada:0, Mensal:1, Semestral:2 };
+    const todas = [...entrada, ...mensais, ...semestrais];
+    todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
+
+    let saldo = 0;
+    todas.forEach((p, i) => {
+      const meses = monthDiff(dataAssinatura, p.data);
+      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, meses, p.outroPct);
+      p.numero = i+1;
+      p.corrFG = corr.corrFG;
+      p.corrIndice = corr.corrIndice;
+      p.corrTotal = corr.corrTotal;
+      p.valorFinal = corr.valorFinal;
+      saldo += p.valorFinal;
+      p.saldoAcumulado = saldo;
+    });
+
+    renderTabela(todas);
+    ultimoCronograma = todas;
+    return todas;
+  }
+
+  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Semestral:'tag-semestral' };
+
+  function renderTabela(todas){
+    const tbody = document.getElementById('tbodyCronograma');
+    const tfoot = document.getElementById('tfootCronograma');
+    const empty = document.getElementById('emptyState');
+    const table = document.getElementById('tabelaCronograma');
+
+    if(todas.length === 0){
+      tbody.innerHTML = '';
+      tfoot.innerHTML = '';
+      table.style.display = 'none';
+      empty.style.display = '';
+      return;
+    }
+    table.style.display = '';
+    empty.style.display = 'none';
+
+    tbody.innerHTML = todas.map(p => `
+      <tr>
+        <td>${String(p.numero).padStart(3,'0')}</td>
+        <td><span class="tag ${tagClass[p.tipo]}">${p.tipo}</span></td>
+        <td>${formatMonthYear(p.data)}</td>
+        <td>${formatMoneyBRL(p.valorOriginal)}</td>
+        <td>${formatMoneyBRL(p.corrFG)}</td>
+        <td>${formatMoneyBRL(p.corrIndice)}</td>
+        <td>${formatMoneyBRL(p.corrTotal)}</td>
+        <td><strong>${formatMoneyBRL(p.valorFinal)}</strong></td>
+        <td>${formatMoneyBRL(p.saldoAcumulado)}</td>
+      </tr>
+    `).join('');
+
+    const soma = (campo) => todas.reduce((acc,p) => acc + p[campo], 0);
+    tfoot.innerHTML = `
+      <tr>
+        <td colspan="3">TOTAL GERAL (${todas.length} parcelas)</td>
+        <td>${formatMoneyBRL(soma('valorOriginal'))}</td>
+        <td>${formatMoneyBRL(soma('corrFG'))}</td>
+        <td>${formatMoneyBRL(soma('corrIndice'))}</td>
+        <td>${formatMoneyBRL(soma('corrTotal'))}</td>
+        <td>${formatMoneyBRL(soma('valorFinal'))}</td>
+        <td>—</td>
+      </tr>
+    `;
+  }
+
+  /* =========================================================
+   *  ATUALIZAÇÃO DO RESUMO FINANCEIRO
+   * ========================================================= */
+
+  function atualizarResumo(todas, entrada, mensais, semestrais){
+    const contratoTotal = getMoneyValue(document.getElementById('inpContratoTotal'));
+    const somaGrupo = (arr) => arr.reduce((acc,p) => acc + p.valorOriginal, 0);
+
+    const entradaNominal = somaGrupo(entrada);
+    const mensaisNominal = somaGrupo(mensais);
+    const semestraisNominal = somaGrupo(semestrais);
+    const totalNominal = entradaNominal + mensaisNominal + semestraisNominal;
+    const financiado = contratoTotal - entradaNominal;
+    const somaParcelas = mensaisNominal + semestraisNominal;
+    const diferenca = contratoTotal - totalNominal;
+
+    const totalCorrigido = todas.reduce((acc,p) => acc + p.valorFinal, 0);
+    const totalCorrecoes = todas.reduce((acc,p) => acc + p.corrTotal, 0);
+
+    // Faixa ao vivo no card de contrato
+    document.getElementById('outFinanciado').textContent = formatMoneyBRL(financiado);
+    document.getElementById('outTotalEntrada').textContent = formatMoneyBRL(entradaNominal);
+    document.getElementById('outSomaParcelas').textContent = formatMoneyBRL(somaParcelas);
+    document.getElementById('outTotalGeral').textContent = formatMoneyBRL(totalNominal);
+    const outDif = document.getElementById('outDiferenca');
+    outDif.textContent = formatMoneyBRL(diferenca);
+    outDif.className = 'v ' + (Math.abs(diferenca) < 0.005 ? 'ok' : 'bad');
+
+    // Card lateral de resumo
+    document.getElementById('resValorContrato').textContent = formatMoneyBRL(contratoTotal);
+    document.getElementById('resEntrada').textContent = formatMoneyBRL(entradaNominal);
+    document.getElementById('resMensais').textContent = formatMoneyBRL(mensaisNominal);
+    document.getElementById('resSemestrais').textContent = formatMoneyBRL(semestraisNominal);
+    document.getElementById('resFinanciado').textContent = formatMoneyBRL(financiado);
+    document.getElementById('resCorrecoes').textContent = formatMoneyBRL(totalCorrecoes);
+    document.getElementById('resTotalCorrigido').textContent = formatMoneyBRL(totalCorrigido);
+    const resDif = document.getElementById('resDiferenca');
+    resDif.textContent = formatMoneyBRL(diferenca);
+    resDif.style.color = Math.abs(diferenca) < 0.005 ? 'var(--success)' : 'var(--danger)';
+
+    const badge = document.getElementById('statusBadge');
+    if(Math.abs(diferenca) < 0.005){
+      badge.className = 'status-badge ok';
+      badge.textContent = '✓ Simulação Fechada — Valores Conferem';
+    } else {
+      badge.className = 'status-badge bad';
+      const sinal = diferenca > 0 ? 'faltam' : 'excedem';
+      badge.textContent = `⚠ Diferença de ${formatMoneyBRL(Math.abs(diferenca))} (${sinal})`;
+    }
+  }
+
+  /* =========================================================
+   *  ORQUESTRAÇÃO GERAL
+   * ========================================================= */
+
+  function recalcularTudo(){
+    lerIndices();
+    atualizarCamposDependentes();
+    const dataAssinatura = parseDateInput(document.getElementById('inpContratoData').value);
+    const entrada = calcularEntrada(dataAssinatura);
+    const mensais = calcularMensais(dataAssinatura);
+    const semestrais = calcularSemestrais(dataAssinatura);
+    const todas = gerarTabela(entrada, mensais, semestrais, dataAssinatura);
+    atualizarResumo(todas, entrada, mensais, semestrais);
+  }
+
+  document.getElementById('formArea').addEventListener('input', recalcularTudo);
+  document.getElementById('formArea').addEventListener('change', recalcularTudo);
+
+  /* =========================================================
+   *  BOTÕES: NOVO CÁLCULO / LIMPAR
+   * ========================================================= */
+
+  function valoresPadrao(){
+    const hoje = new Date();
+    document.getElementById('inpContratoData').value = toISODate(hoje);
+    setMoneyValue(document.getElementById('inpContratoTotal'), 0);
+
+    document.querySelector('input[name="entradaTipo"][value="avista"]').checked = true;
+    setMoneyValue(document.getElementById('inpEntradaAvistaValor'), 0);
+    document.getElementById('inpEntradaAvistaData').value = toISODate(hoje);
+    document.getElementById('inpEntradaQtd').value = 3;
+    document.getElementById('inpEntradaData').value = toISODate(hoje);
+    document.querySelector('input[name="entradaModoValor"][value="total"]').checked = true;
+    setMoneyValue(document.getElementById('inpEntradaValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpEntradaValorParcela'), 0);
+    document.getElementById('selCorrecaoEntrada').value = 'nenhuma';
+    document.getElementById('inpOutroEntrada').value = 0;
+
+    document.getElementById('chkMensaisHabilitado').checked = true;
+    document.getElementById('selMensaisModo').value = 'qtd_total';
+    document.getElementById('inpMensaisData').value = toISODate(addMonths(hoje,1));
+    document.getElementById('inpMensaisQtd').value = 12;
+    setMoneyValue(document.getElementById('inpMensaisValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpMensaisValorParcela'), 0);
+    document.getElementById('selCorrecaoMensais').value = 'nenhuma';
+    document.getElementById('inpOutroMensais').value = 0;
+
+    document.getElementById('chkSemestraisHabilitado').checked = false;
+    document.getElementById('selSemestraisModo').value = 'qtd_total';
+    document.getElementById('inpSemestraisData').value = toISODate(addMonths(hoje,6));
+    document.getElementById('inpSemestraisQtd').value = 2;
+    setMoneyValue(document.getElementById('inpSemestraisValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpSemestraisValorParcela'), 0);
+    document.getElementById('selCorrecaoSemestrais').value = 'nenhuma';
+    document.getElementById('inpOutroSemestrais').value = 0;
+
+    recalcularTudo();
+  }
+
+  document.getElementById('btnNovo').addEventListener('click', valoresPadrao);
+  document.getElementById('btnLimpar').addEventListener('click', () => {
+    if(confirm('Limpar todos os dados da simulação atual?')) valoresPadrao();
+  });
+
+  /* =========================================================
+   *  IMPRIMIR
+   * ========================================================= */
+
+  document.getElementById('btnImprimir').addEventListener('click', () => {
+    document.getElementById('printDate').textContent = 'Gerado em ' + formatDateBR(new Date()) + ' às ' + new Date().toLocaleTimeString('pt-BR');
+    window.print();
+  });
+
+  /* =========================================================
+   *  EXPORTAÇÃO PDF (via janela de impressão)
+   * ========================================================= */
+
+  function montarHtmlRelatorio(){
+    const contratoTotal = formatMoneyBRL(getMoneyValue(document.getElementById('inpContratoTotal')));
+    const resumoHtml = document.getElementById('cardResumo').outerHTML;
+    const tabelaHtml = document.getElementById('tabelaCronograma').outerHTML;
+    const emptyHtml = ultimoCronograma.length === 0 ? document.getElementById('emptyState').outerHTML : '';
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="UTF-8">
+      <title>Simulação de Parcelas — Relatório</title>
+      <style>
+        body{ font-family: Arial, sans-serif; color:#1c2a3a; padding:28px; }
+        h1{ font-size:20px; margin:0 0 4px; }
+        p.sub{ color:#666; font-size:12px; margin:0 0 20px; }
+        table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:18px; }
+        th,td{ border:1px solid #dde3ec; padding:7px 9px; text-align:right; }
+        th{ background:#123a70; color:#fff; }
+        th:nth-child(-n+2), td:nth-child(-n+2){ text-align:left; }
+        tfoot td{ font-weight:bold; background:#f6f8fb; }
+        .card{ border:1px solid #dde3ec; border-radius:8px; padding:14px 18px; max-width:420px; }
+        .card-head{ display:none; }
+        .resumo-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #dde3ec; font-size:13px; }
+        .status-badge{ margin-top:10px; padding:10px; border-radius:8px; font-weight:bold; font-size:13px; }
+        .status-badge.ok{ background:#eafaf0; color:#16a34a; }
+        .status-badge.bad{ background:#fdecec; color:#dc2626; }
+        .tag{ padding:2px 8px; border-radius:20px; font-size:10px; font-weight:bold; }
+        .tag-entrada{ background:#e8f0fc; color:#1d4d8f; }
+        .tag-mensal{ background:#eafaf0; color:#16a34a; }
+        .tag-semestral{ background:#fef3e2; color:#b45309; }
+      </style></head>
+      <body>
+        <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
+        <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        ${resumoHtml}
+        ${tabelaHtml}
+        ${emptyHtml}
+      </body></html>`;
+  }
+
+  document.getElementById('btnPdf').addEventListener('click', () => {
+    const win = window.open('', '_blank');
+    if(!win){ alert('Permita pop-ups para exportar em PDF.'); return; }
+    win.document.write(montarHtmlRelatorio());
+    win.document.close();
+    win.onload = () => win.print();
+    setTimeout(() => win.print(), 300);
+  });
+
+  /* =========================================================
+   *  EXPORTAÇÃO EXCEL (.xlsx) — ZIP/OOXML gerado em JS puro
+   * ========================================================= */
+
+  function makeCRCTable(){
+    const table = [];
+    for(let n=0;n<256;n++){
+      let c = n;
+      for(let k=0;k<8;k++){ c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); }
+      table[n] = c;
+    }
+    return table;
+  }
+  const CRC_TABLE = makeCRCTable();
+  function crc32(bytes){
+    let crc = 0xFFFFFFFF;
+    for(let i=0;i<bytes.length;i++){ crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8); }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  // Monta um arquivo .zip sem compressão (método "store") a partir de {name, data} — suficiente para OOXML.
+  function createZipStore(files){
+    const encoder = new TextEncoder();
+    const localParts = [], centralParts = [];
+    let offset = 0;
+    const time = 0, date = 0x21;
+
+    files.forEach(f => {
+      const nameBytes = encoder.encode(f.name);
+      const data = f.data instanceof Uint8Array ? f.data : encoder.encode(f.data);
+      const crc = crc32(data);
+
+      const localHeader = new Uint8Array(30 + nameBytes.length);
+      const lv = new DataView(localHeader.buffer);
+      lv.setUint32(0, 0x04034b50, true);
+      lv.setUint16(4, 20, true);
+      lv.setUint16(6, 0, true);
+      lv.setUint16(8, 0, true);
+      lv.setUint16(10, time, true);
+      lv.setUint16(12, date, true);
+      lv.setUint32(14, crc, true);
+      lv.setUint32(18, data.length, true);
+      lv.setUint32(22, data.length, true);
+      lv.setUint16(26, nameBytes.length, true);
+      lv.setUint16(28, 0, true);
+      localHeader.set(nameBytes, 30);
+      localParts.push(localHeader, data);
+
+      const centralHeader = new Uint8Array(46 + nameBytes.length);
+      const cv = new DataView(centralHeader.buffer);
+      cv.setUint32(0, 0x02014b50, true);
+      cv.setUint16(4, 20, true);
+      cv.setUint16(6, 20, true);
+      cv.setUint16(8, 0, true);
+      cv.setUint16(10, 0, true);
+      cv.setUint16(12, time, true);
+      cv.setUint16(14, date, true);
+      cv.setUint32(16, crc, true);
+      cv.setUint32(20, data.length, true);
+      cv.setUint32(24, data.length, true);
+      cv.setUint16(28, nameBytes.length, true);
+      cv.setUint16(30, 0, true);
+      cv.setUint16(32, 0, true);
+      cv.setUint16(34, 0, true);
+      cv.setUint16(36, 0, true);
+      cv.setUint32(38, 0, true);
+      cv.setUint32(42, offset, true);
+      centralHeader.set(nameBytes, 46);
+      centralParts.push(centralHeader);
+
+      offset += localHeader.length + data.length;
+    });
+
+    const centralStart = offset;
+    const centralSize = centralParts.reduce((a,p) => a+p.length, 0);
+
+    const end = new Uint8Array(22);
+    const ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, files.length, true);
+    ev.setUint16(10, files.length, true);
+    ev.setUint32(12, centralSize, true);
+    ev.setUint32(16, centralStart, true);
+
+    const out = new Uint8Array(offset + centralSize + end.length);
+    let pos = 0;
+    localParts.forEach(p => { out.set(p, pos); pos += p.length; });
+    centralParts.forEach(p => { out.set(p, pos); pos += p.length; });
+    out.set(end, pos);
+    return out;
+  }
+
+  function xmlEscape(s){
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function buildSheetXml(rows){
+    let rowsXml = '';
+    rows.forEach((row, ri) => {
+      let cellsXml = '';
+      row.forEach((val, ci) => {
+        const colLetter = String.fromCharCode(65+ci);
+        const ref = colLetter + (ri+1);
+        if(typeof val === 'number' && Number.isFinite(val)){
+          cellsXml += `<c r="${ref}"><v>${val}</v></c>`;
+        } else {
+          cellsXml += `<c r="${ref}" t="inlineStr"><is><t>${xmlEscape(val)}</t></is></c>`;
+        }
+      });
+      rowsXml += `<row r="${ri+1}">${cellsXml}</row>`;
+    });
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rowsXml}</sheetData></worksheet>`;
+  }
+
+  function gerarLinhasPlanilha(){
+    const rows = [];
+    rows.push(['Nº','Tipo','Vencimento','Valor Original','Correção 0,69%','Correção Índice','Total Correção','Valor Final','Saldo Acumulado']);
+    ultimoCronograma.forEach(p => {
+      rows.push([
+        p.numero, p.tipo, formatMonthYear(p.data),
+        Number(p.valorOriginal.toFixed(2)), Number(p.corrFG.toFixed(2)), Number(p.corrIndice.toFixed(2)),
+        Number(p.corrTotal.toFixed(2)), Number(p.valorFinal.toFixed(2)), Number(p.saldoAcumulado.toFixed(2))
+      ]);
+    });
+    const soma = (campo) => Number(ultimoCronograma.reduce((a,p) => a+p[campo], 0).toFixed(2));
+    rows.push(['', 'TOTAL GERAL', '', soma('valorOriginal'), soma('corrFG'), soma('corrIndice'), soma('corrTotal'), soma('valorFinal'), '']);
+    return rows;
+  }
+
+  function exportarExcel(){
+    if(ultimoCronograma.length === 0){ alert('Não há parcelas para exportar. Preencha os dados da simulação.'); return; }
+
+    const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+
+    const rootRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+
+    const workbook = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="Cronograma" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+
+    const workbookRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+
+    const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
+<fills count="1"><fill><patternFill patternType="none"/></fill></fills>
+<borders count="1"><border/></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs>
+</styleSheet>`;
+
+    const sheet1 = buildSheetXml(gerarLinhasPlanilha());
+
+    const files = [
+      { name: '[Content_Types].xml', data: contentTypes },
+      { name: '_rels/.rels', data: rootRels },
+      { name: 'xl/workbook.xml', data: workbook },
+      { name: 'xl/_rels/workbook.xml.rels', data: workbookRels },
+      { name: 'xl/styles.xml', data: styles },
+      { name: 'xl/worksheets/sheet1.xml', data: sheet1 }
+    ];
+
+    const zipBytes = createZipStore(files);
+    const blob = new Blob([zipBytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cronograma-parcelas-${toISODate(new Date())}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  document.getElementById('btnExcel').addEventListener('click', exportarExcel);
+
+  /* =========================================================
+   *  INICIALIZAÇÃO
+   * ========================================================= */
+
+  valoresPadrao();
+
+})();
+</script>
+</body>
+</html>
