@@ -39,7 +39,7 @@
   label{ font-size:12.5px; font-weight:600; color: var(--text-muted); display:block; margin-bottom:6px; letter-spacing:.01em; }
   input, select{
     font-family: inherit;
-    font-size: 14px;
+    font-size: 16px;
     padding: 9px 11px;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -363,7 +363,7 @@
           <div class="field-row">
             <div class="field">
               <label for="inpJurosEntrada">Juros/Spread (a.m.)</label>
-              <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpJurosEntrada" value="0"><span class="suffix">%</span></div>
+              <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosEntrada" value="0"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <label for="selIndiceEntrada">Índice</label>
@@ -377,7 +377,7 @@
             </div>
             <div class="field">
               <label for="inpIndicePctEntrada">Percentual do índice (a.m.)</label>
-              <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctEntrada" value="0"><span class="suffix">%</span></div>
+              <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctEntrada" value="0"><span class="suffix">%</span></div>
             </div>
           </div>
           <p class="hint" id="entradaCorrecaoHint" style="display:none;">A 1ª parcela da entrada nunca recebe correção. O reajuste é aplicado automaticamente a partir da 2ª parcela em diante.</p>
@@ -434,7 +434,7 @@
             <div class="field-row">
               <div class="field">
                 <label for="inpJurosMensais">Juros/Spread (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpJurosMensais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosMensais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="selIndiceMensais">Índice</label>
@@ -448,7 +448,7 @@
               </div>
               <div class="field">
                 <label for="inpIndicePctMensais">Percentual do índice (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctMensais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctMensais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="inpMensaisCorrigirDe">Corrigir a partir da parcela nº</label>
@@ -510,7 +510,7 @@
             <div class="field-row">
               <div class="field">
                 <label for="inpJurosBimestrais">Juros/Spread (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpJurosBimestrais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosBimestrais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="selIndiceBimestrais">Índice</label>
@@ -524,7 +524,7 @@
               </div>
               <div class="field">
                 <label for="inpIndicePctBimestrais">Percentual do índice (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctBimestrais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctBimestrais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="inpBimestraisCorrigirDe">Corrigir a partir da parcela nº</label>
@@ -586,7 +586,7 @@
             <div class="field-row">
               <div class="field">
                 <label for="inpJurosSemestrais">Juros/Spread (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpJurosSemestrais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosSemestrais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="selIndiceSemestrais">Índice</label>
@@ -600,7 +600,7 @@
               </div>
               <div class="field">
                 <label for="inpIndicePctSemestrais">Percentual do índice (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctSemestrais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctSemestrais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="inpSemestraisCorrigirDe">Corrigir a partir da parcela nº</label>
@@ -662,7 +662,7 @@
             <div class="field-row">
               <div class="field">
                 <label for="inpJurosAnuais">Juros/Spread (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpJurosAnuais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosAnuais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="selIndiceAnuais">Índice</label>
@@ -676,7 +676,7 @@
               </div>
               <div class="field">
                 <label for="inpIndicePctAnuais">Percentual do índice (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctAnuais" value="0"><span class="suffix">%</span></div>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctAnuais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="inpAnuaisCorrigirDe">Corrigir a partir da parcela nº</label>
@@ -880,6 +880,27 @@
 
   document.querySelectorAll('.money-input').forEach(attachMoneyMask);
 
+  // Campos de percentual (Juros/Spread, índice) usam texto + inputmode="decimal" em vez de
+  // type="number": em muitos teclados de celular um <input type="number"> rejeita a vírgula
+  // decimal, então o corretor não conseguia digitar "0,5". Aqui só filtramos caracteres
+  // inválidos (mantendo dígitos, vírgula e ponto) e aceitamos os dois separadores na leitura.
+  function attachPercentMask(el){
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/[^0-9.,]/g, '');
+    });
+  }
+  function getPercentValue(el){
+    return parseFloat(el.value.replace(',', '.')) || 0;
+  }
+
+  document.querySelectorAll('.pct-input').forEach(attachPercentMask);
+
+  // Seleciona o conteúdo ao focar, para que digitar substitua o valor (geralmente "0")
+  // em vez de inserir no meio dele — comum em campos numéricos com valor padrão.
+  document.querySelectorAll('.pct-input, .money-input').forEach(el => {
+    el.addEventListener('focus', () => el.select());
+  });
+
   /* =========================================================
    *  CONFIGURAÇÃO DE ÍNDICES (editável na UI, fácil de ajustar)
    * ========================================================= */
@@ -959,7 +980,7 @@
       document.getElementById('entradaIndividualWrap').style.display = 'none';
     }
 
-    const jurosEntrada = parseFloat(document.getElementById('inpJurosEntrada').value) || 0;
+    const jurosEntrada = getPercentValue(document.getElementById('inpJurosEntrada'));
     const indiceEntrada = document.getElementById('selIndiceEntrada').value;
     document.getElementById('entradaCorrecaoHint').style.display =
       (tipoEntrada === 'parcelada' && (jurosEntrada > 0 || indiceEntrada !== 'nenhum')) ? '' : 'none';
@@ -1006,9 +1027,9 @@
 
   function calcularEntrada(dataAssinatura){
     const tipo = document.querySelector('input[name="entradaTipo"]:checked').value;
-    const jurosSpreadPct = parseFloat(document.getElementById('inpJurosEntrada').value) || 0;
+    const jurosSpreadPct = getPercentValue(document.getElementById('inpJurosEntrada'));
     const indiceTipo = document.getElementById('selIndiceEntrada').value;
-    const indicePct = parseFloat(document.getElementById('inpIndicePctEntrada').value) || 0;
+    const indicePct = getPercentValue(document.getElementById('inpIndicePctEntrada'));
     const parcelas = [];
 
     if(tipo === 'avista'){
@@ -1083,9 +1104,9 @@
 
     if(qtd <= 0) return [];
 
-    const jurosSpreadPct = parseFloat(document.getElementById(`inpJuros${prefixo}`).value) || 0;
+    const jurosSpreadPct = getPercentValue(document.getElementById(`inpJuros${prefixo}`));
     const indiceTipo = document.getElementById(`selIndice${prefixo}`).value;
-    const indicePct = parseFloat(document.getElementById(`inpIndicePct${prefixo}`).value) || 0;
+    const indicePct = getPercentValue(document.getElementById(`inpIndicePct${prefixo}`));
     const corrigirApartirDe = Math.max(1, parseInt(document.getElementById(`inp${prefixo}CorrigirDe`).value,10) || 1);
     const parcelas = [];
     for(let i=0;i<qtd;i++){
