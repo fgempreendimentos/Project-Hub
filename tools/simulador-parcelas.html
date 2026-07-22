@@ -13,9 +13,9 @@
     --text: #1c2a3a;
     --text-muted: #66768c;
     --text-faint: #94a3b8;
-    --primary: #1d4d8f;
-    --primary-dark: #123a70;
-    --primary-soft: #e8f0fc;
+    --primary: #0f5b66;
+    --primary-dark: #0c4750;
+    --primary-soft: #e3f0f1;
     --success: #16a34a;
     --success-soft: #eafaf0;
     --danger: #dc2626;
@@ -39,7 +39,7 @@
   label{ font-size:12.5px; font-weight:600; color: var(--text-muted); display:block; margin-bottom:6px; letter-spacing:.01em; }
   input, select{
     font-family: inherit;
-    font-size: 14px;
+    font-size: 16px;
     padding: 9px 11px;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -72,9 +72,11 @@
   }
   .topbar .brand{ display:flex; align-items:center; gap:12px; }
   .brand .logo{
-    width:38px; height:38px; border-radius:9px; background: rgba(255,255,255,.15);
-    display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700;
+    width:42px; height:42px; border-radius:9px; background:#ffffff;
+    display:flex; align-items:center; justify-content:center; padding:5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
   }
+  .brand .logo svg{ width:100%; height:100%; display:block; }
   .brand h1{ font-size:16.5px; }
   .brand p{ margin:2px 0 0; font-size:12px; opacity:.8; }
   .actions{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -87,7 +89,7 @@
   .btn-light{ background: rgba(255,255,255,.12); color:#fff; border-color: rgba(255,255,255,.25); }
   .btn-light:hover{ background: rgba(255,255,255,.22); }
   .btn-primary{ background:#fff; color: var(--primary-dark); }
-  .btn-primary:hover{ background:#eaf1fc; }
+  .btn-primary:hover{ background:#d5eaec; }
   .btn-ghost{ background:transparent; color: var(--text-muted); border-color: var(--border); }
   .btn-ghost:hover{ background: var(--surface-alt); }
   .btn-danger-outline{ background:transparent; color:#ffe4e0; border-color: rgba(255,255,255,.3); }
@@ -176,9 +178,6 @@
   .status-badge.ok{ background: var(--success-soft); color: var(--success); border:1px solid #bfe8cf; }
   .status-badge.bad{ background: var(--danger-soft); color: var(--danger); border:1px solid #f5c6c2; }
 
-  /* ---------- Indices card ---------- */
-  .idx-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  .idx-item label{ margin-bottom:5px; }
   .pct-field{ position:relative; }
   .pct-field input{ padding-right: 28px; text-align:right; }
   .pct-field .suffix{ position:absolute; right:11px; top:50%; transform:translateY(-50%); font-size:12.5px; color:var(--text-muted); font-weight:600; }
@@ -198,9 +197,11 @@
   table.cronograma tbody tr:hover{ background: var(--surface-alt); }
   table.cronograma tbody tr:nth-child(even){ background: rgba(29,77,143,.02); }
   .tag{ display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700; }
-  .tag-entrada{ background:#e8f0fc; color:var(--primary); }
+  .tag-entrada{ background:#e3f0f1; color:var(--primary); }
   .tag-mensal{ background:#eafaf0; color:var(--success); }
+  .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
   .tag-semestral{ background:#fef3e2; color:var(--warning); }
+  .tag-anual{ background:#fdecec; color:var(--danger); }
   table.cronograma tfoot td{
     padding:12px; font-weight:700; background: var(--surface-alt); border-top:2px solid var(--border);
     text-align:right; white-space:nowrap;
@@ -227,16 +228,29 @@
     .print-only{ display:block !important; }
   }
   .print-only{ display:none; }
+
+  .noscript-banner{
+    background: var(--danger-soft); color: var(--danger); border-bottom: 2px solid var(--danger);
+    padding: 14px 20px; font-size: 14px; font-weight:600; text-align:center;
+  }
 </style>
 </head>
 <body>
 
+<noscript>
+  <div class="noscript-banner">
+    ⚠ Este simulador precisa de JavaScript para funcionar. Se você está vendo esta mensagem em uma
+    pré-visualização de arquivo (ex.: preview do WhatsApp/Telegram/Arquivos no celular), toque no
+    ícone de compartilhar e escolha "Abrir no Safari" ou "Abrir no Chrome".
+  </div>
+</noscript>
+
 <header class="topbar no-print">
   <div class="brand">
-    <div class="logo">FG</div>
+    <div class="logo" id="appLogoMark"></div>
     <div>
       <h1>Simulador de Parcelas</h1>
-      <p>Ferramenta de negociação imobiliária</p>
+      <p>FG Empreendimentos · Ferramenta de negociação imobiliária</p>
     </div>
   </div>
   <div class="actions">
@@ -249,6 +263,7 @@
 </header>
 
 <div class="print-only" style="padding:24px 0 8px;">
+  <div id="printLogoWrap" style="margin-bottom:10px;"></div>
   <h1 style="font-size:20px;">Simulação de Parcelamento — FG Negociação Imobiliária</h1>
   <p style="font-size:12px;color:#666;margin:4px 0 0;" id="printDate"></p>
 </div>
@@ -331,7 +346,8 @@
 
             <div class="radio-group">
               <label class="radio-opt"><input type="radio" name="entradaModoValor" value="total" checked> Informar valor total da entrada</label>
-              <label class="radio-opt"><input type="radio" name="entradaModoValor" value="parcela"> Informar valor de cada parcela</label>
+              <label class="radio-opt"><input type="radio" name="entradaModoValor" value="parcela"> Informar valor de cada parcela (iguais)</label>
+              <label class="radio-opt"><input type="radio" name="entradaModoValor" value="individual"> Valores diferentes por parcela</label>
             </div>
 
             <div class="field-row" style="margin-top:12px;">
@@ -341,12 +357,17 @@
                   <input type="text" inputmode="numeric" class="money-input" id="inpEntradaValorTotal" value="0,00">
                 </div>
               </div>
-              <div class="field">
+              <div class="field" id="entradaValorParcelaWrap">
                 <label for="inpEntradaValorParcela">Valor de cada parcela</label>
                 <div class="money-field"><span class="prefix">R$</span>
                   <input type="text" inputmode="numeric" class="money-input" id="inpEntradaValorParcela" value="0,00" readonly>
                 </div>
               </div>
+            </div>
+
+            <div id="entradaIndividualWrap" style="display:none;">
+              <p class="hint" style="margin:2px 0 10px;">Informe o valor de cada parcela da entrada individualmente. O valor total é somado automaticamente.</p>
+              <div class="field-row" id="entradaIndividualList"></div>
             </div>
           </div>
 
@@ -354,25 +375,25 @@
           <div class="section-label">Correção da entrada</div>
           <div class="field-row">
             <div class="field">
-              <label for="selCorrecaoEntrada">Índice de reajuste</label>
-              <select id="selCorrecaoEntrada">
-                <option value="nenhuma">Sem reajuste</option>
-                <option value="fg">0,69% ao mês (Padrão FG)</option>
+              <label for="inpJurosEntrada">Juros/Spread (a.m.)</label>
+              <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosEntrada" value="0"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <label for="selIndiceEntrada">Índice</label>
+              <select id="selIndiceEntrada">
+                <option value="nenhum">Sem índice</option>
+                <option value="igpm">IGP-M</option>
+                <option value="incc">INCC</option>
                 <option value="ipca">IPCA</option>
                 <option value="inpc">INPC</option>
-                <option value="igpm">IGP-M</option>
-                <option value="outro">Outro índice (informar %)</option>
-                <option value="fg_ipca">0,69% + IPCA</option>
-                <option value="fg_inpc">0,69% + INPC</option>
-                <option value="fg_igpm">0,69% + IGP-M</option>
-                <option value="fg_outro">0,69% + Outro índice</option>
               </select>
             </div>
-            <div class="field" id="outroEntradaWrap" style="display:none;">
-              <label for="inpOutroEntrada">Percentual do outro índice (a.m.)</label>
-              <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroEntrada" value="0"><span class="suffix">%</span></div>
+            <div class="field">
+              <label for="inpIndicePctEntrada">Percentual do índice (a.m.)</label>
+              <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctEntrada" value="0"><span class="suffix">%</span></div>
             </div>
           </div>
+          <p class="hint" id="entradaCorrecaoHint" style="display:none;">A 1ª parcela da entrada nunca recebe correção. O reajuste é aplicado automaticamente a partir da 2ª parcela em diante.</p>
         </div>
       </div>
 
@@ -425,23 +446,103 @@
             <div class="section-label">Correção das mensais</div>
             <div class="field-row">
               <div class="field">
-                <label for="selCorrecaoMensais">Índice de reajuste</label>
-                <select id="selCorrecaoMensais">
-                  <option value="nenhuma">Sem reajuste</option>
-                  <option value="fg">0,69% ao mês (Padrão FG)</option>
+                <label for="inpJurosMensais">Juros/Spread (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosMensais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="selIndiceMensais">Índice</label>
+                <select id="selIndiceMensais">
+                  <option value="nenhum">Sem índice</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="incc">INCC</option>
                   <option value="ipca">IPCA</option>
                   <option value="inpc">INPC</option>
-                  <option value="igpm">IGP-M</option>
-                  <option value="outro">Outro índice (informar %)</option>
-                  <option value="fg_ipca">0,69% + IPCA</option>
-                  <option value="fg_inpc">0,69% + INPC</option>
-                  <option value="fg_igpm">0,69% + IGP-M</option>
-                  <option value="fg_outro">0,69% + Outro índice</option>
                 </select>
               </div>
-              <div class="field" id="outroMensaisWrap" style="display:none;">
-                <label for="inpOutroMensais">Percentual do outro índice (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroMensais" value="0"><span class="suffix">%</span></div>
+              <div class="field">
+                <label for="inpIndicePctMensais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctMensais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpMensaisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpMensaisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela mensal).</p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- Parcelas Bimestrais -->
+      <div class="card" id="cardBimestrais">
+        <div class="card-head">
+          <h2><span class="icon">📆</span> Parcelas Bimestrais</h2>
+          <label class="check-opt"><input type="checkbox" id="chkBimestraisHabilitado"> Habilitar</label>
+        </div>
+        <div class="card-body">
+          <fieldset id="bimestraisFieldset" disabled>
+            <div class="field-row">
+              <div class="field">
+                <label for="selBimestraisModo">Definir por</label>
+                <select id="selBimestraisModo">
+                  <option value="qtd_total">Quantidade + valor total</option>
+                  <option value="qtd_parcela">Quantidade + valor da parcela</option>
+                  <option value="total_parcela">Valor total + valor da parcela</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpBimestraisData">1º vencimento</label>
+                <input type="date" id="inpBimestraisData">
+              </div>
+              <div class="field">
+                <label>Periodicidade</label>
+                <input type="text" value="Bimestral (2 em 2 meses)" disabled>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field" id="bimestraisQtdWrap">
+                <label for="inpBimestraisQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpBimestraisQtd" value="6">
+              </div>
+              <div class="field" id="bimestraisTotalWrap">
+                <label for="inpBimestraisValorTotal">Valor total destinado às bimestrais</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpBimestraisValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field" id="bimestraisParcelaWrap" style="display:none;">
+                <label for="inpBimestraisValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpBimestraisValorParcela" value="0,00">
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Correção das bimestrais</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="inpJurosBimestrais">Juros/Spread (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosBimestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="selIndiceBimestrais">Índice</label>
+                <select id="selIndiceBimestrais">
+                  <option value="nenhum">Sem índice</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="incc">INCC</option>
+                  <option value="ipca">IPCA</option>
+                  <option value="inpc">INPC</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpIndicePctBimestrais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctBimestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpBimestraisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpBimestraisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela bimestral).</p>
               </div>
             </div>
           </fieldset>
@@ -497,23 +598,103 @@
             <div class="section-label">Correção das semestrais</div>
             <div class="field-row">
               <div class="field">
-                <label for="selCorrecaoSemestrais">Índice de reajuste</label>
-                <select id="selCorrecaoSemestrais">
-                  <option value="nenhuma">Sem reajuste</option>
-                  <option value="fg">0,69% ao mês (Padrão FG)</option>
+                <label for="inpJurosSemestrais">Juros/Spread (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosSemestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="selIndiceSemestrais">Índice</label>
+                <select id="selIndiceSemestrais">
+                  <option value="nenhum">Sem índice</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="incc">INCC</option>
                   <option value="ipca">IPCA</option>
                   <option value="inpc">INPC</option>
-                  <option value="igpm">IGP-M</option>
-                  <option value="outro">Outro índice (informar %)</option>
-                  <option value="fg_ipca">0,69% + IPCA</option>
-                  <option value="fg_inpc">0,69% + INPC</option>
-                  <option value="fg_igpm">0,69% + IGP-M</option>
-                  <option value="fg_outro">0,69% + Outro índice</option>
                 </select>
               </div>
-              <div class="field" id="outroSemestraisWrap" style="display:none;">
-                <label for="inpOutroSemestrais">Percentual do outro índice (a.m.)</label>
-                <div class="pct-field"><input type="number" step="0.01" min="0" id="inpOutroSemestrais" value="0"><span class="suffix">%</span></div>
+              <div class="field">
+                <label for="inpIndicePctSemestrais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctSemestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpSemestraisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpSemestraisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela semestral).</p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+      <!-- Parcelas Anuais -->
+      <div class="card" id="cardAnuais">
+        <div class="card-head">
+          <h2><span class="icon">🗓️</span> Parcelas Anuais</h2>
+          <label class="check-opt"><input type="checkbox" id="chkAnuaisHabilitado"> Habilitar</label>
+        </div>
+        <div class="card-body">
+          <fieldset id="anuaisFieldset" disabled>
+            <div class="field-row">
+              <div class="field">
+                <label for="selAnuaisModo">Definir por</label>
+                <select id="selAnuaisModo">
+                  <option value="qtd_total">Quantidade + valor total</option>
+                  <option value="qtd_parcela">Quantidade + valor da parcela</option>
+                  <option value="total_parcela">Valor total + valor da parcela</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpAnuaisData">1º vencimento</label>
+                <input type="date" id="inpAnuaisData">
+              </div>
+              <div class="field">
+                <label>Periodicidade</label>
+                <input type="text" value="Anual (12 em 12 meses)" disabled>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field" id="anuaisQtdWrap">
+                <label for="inpAnuaisQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpAnuaisQtd" value="2">
+              </div>
+              <div class="field" id="anuaisTotalWrap">
+                <label for="inpAnuaisValorTotal">Valor total destinado às anuais</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpAnuaisValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field" id="anuaisParcelaWrap" style="display:none;">
+                <label for="inpAnuaisValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpAnuaisValorParcela" value="0,00">
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Correção das anuais</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="inpJurosAnuais">Juros/Spread (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosAnuais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="selIndiceAnuais">Índice</label>
+                <select id="selIndiceAnuais">
+                  <option value="nenhum">Sem índice</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="incc">INCC</option>
+                  <option value="ipca">IPCA</option>
+                  <option value="inpc">INPC</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpIndicePctAnuais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctAnuais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpAnuaisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpAnuaisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela anual).</p>
               </div>
             </div>
           </fieldset>
@@ -532,38 +713,15 @@
             <div class="resumo-row"><span class="lbl">Valor do contrato</span><span class="val" id="resValorContrato">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Entrada</span><span class="val" id="resEntrada">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Mensais</span><span class="val" id="resMensais">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Bimestrais</span><span class="val" id="resBimestrais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Semestrais</span><span class="val" id="resSemestrais">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Anuais</span><span class="val" id="resAnuais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Valor financiado</span><span class="val" id="resFinanciado">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Total das correções</span><span class="val" id="resCorrecoes">R$ 0,00</span></div>
             <div class="resumo-row total"><span class="lbl">Total corrigido</span><span class="val" id="resTotalCorrigido">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Diferença p/ contrato</span><span class="val" id="resDiferenca">R$ 0,00</span></div>
           </div>
           <div class="status-badge ok" id="statusBadge">✓ Simulação Fechada</div>
-        </div>
-      </div>
-
-      <div class="card no-print" id="cardIndices">
-        <div class="card-head"><h2><span class="icon">⚙️</span> Configuração de Índices</h2></div>
-        <div class="card-body compact">
-          <p class="hint" style="margin:0 0 12px;">Percentuais mensais (%). Atualize aqui quando novos índices forem divulgados.</p>
-          <div class="idx-grid">
-            <div class="idx-item">
-              <label for="idxFG">FG (padrão)</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxFG" value="0.69"><span class="suffix">%</span></div>
-            </div>
-            <div class="idx-item">
-              <label for="idxIPCA">IPCA</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxIPCA" value="0"><span class="suffix">%</span></div>
-            </div>
-            <div class="idx-item">
-              <label for="idxINPC">INPC</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxINPC" value="0"><span class="suffix">%</span></div>
-            </div>
-            <div class="idx-item">
-              <label for="idxIGPM">IGP-M</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxIGPM" value="0"><span class="suffix">%</span></div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -585,8 +743,8 @@
               <th>Tipo</th>
               <th>Vencimento</th>
               <th>Valor Original</th>
-              <th>Correção 0,69%</th>
-              <th>Correção Índice</th>
+              <th>Juros/Spread</th>
+              <th id="thCorrecaoIndice">Correção Índice</th>
               <th>Total Correção</th>
               <th>Valor Final</th>
               <th>Saldo Acumulado</th>
@@ -606,6 +764,50 @@
 <script>
 (function(){
   'use strict';
+
+  /* =========================================================
+   *  LOGOTIPO FG (marca vetorial, sem dependência de arquivo externo)
+   * ========================================================= */
+
+  // Ícone compacto (bandeira + linhas de vento), usado no cabeçalho da aplicação.
+  const FG_MARK_SVG = `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FG Empreendimentos">
+    <defs><clipPath id="fgFlagClipMark"><polygon points="58,8 184,42 148,192 12,158"/></clipPath></defs>
+    <polygon points="58,8 184,42 148,192 12,158" fill="#0f5b66"/>
+    <g clip-path="url(#fgFlagClipMark)">
+      <path d="M -10,205 C 60,175 110,150 215,60 L 215,80 C 115,165 65,190 -10,222 Z" fill="#0c4750"/>
+      <g stroke="#ffffff" stroke-width="10" fill="none" stroke-linecap="round">
+        <path d="M -10,205 Q 95,150 210,15"/>
+        <path d="M -10,205 Q 85,168 216,68"/>
+        <path d="M -10,205 Q 70,185 218,118"/>
+      </g>
+    </g>
+  </svg>`;
+
+  // Marca completa (ícone + "FG" + "EMPREENDIMENTOS"), usada no relatório impresso/PDF.
+  const FG_LOGO_FULL_SVG = `<svg viewBox="0 0 700 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="FG Empreendimentos" style="height:64px;width:auto;">
+    <defs><clipPath id="fgFlagClipFull"><polygon points="110,20 335,124 255,378 20,314"/></clipPath></defs>
+    <polygon points="110,20 335,124 255,378 20,314" fill="#0f5b66"/>
+    <g clip-path="url(#fgFlagClipFull)">
+      <path d="M -20,405 C 100,340 200,285 400,110 L 400,150 C 210,320 110,375 -20,440 Z" fill="#0c4750"/>
+      <g stroke="#ffffff" stroke-width="18" fill="none" stroke-linecap="round">
+        <path d="M -20,405 Q 170,290 400,30"/>
+        <path d="M -20,405 Q 150,320 410,130"/>
+        <path d="M -20,405 Q 120,355 415,225"/>
+      </g>
+    </g>
+    <text x="400" y="230" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="230" fill="#0f5b66" letter-spacing="-8">FG</text>
+    <text x="90" y="420" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="48" fill="#75787a" letter-spacing="4">EMPREENDIMENTOS</text>
+  </svg>`;
+
+  document.getElementById('appLogoMark').innerHTML = FG_MARK_SVG;
+  document.getElementById('printLogoWrap').innerHTML = FG_LOGO_FULL_SVG;
+
+  const favicon = document.createElement('link');
+  favicon.rel = 'icon';
+  favicon.type = 'image/svg+xml';
+  const faviconSvg = FG_MARK_SVG.replace('<defs>', '<rect width="200" height="200" fill="#ffffff"/><defs>');
+  favicon.href = 'data:image/svg+xml,' + encodeURIComponent(faviconSvg);
+  document.head.appendChild(favicon);
 
   /* =========================================================
    *  UTILITÁRIOS DE DATA
@@ -644,12 +846,6 @@
     const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
     d.setDate(Math.min(day, lastDay));
     return d;
-  }
-
-  // Quantidade de meses de calendário entre duas datas (nunca negativo).
-  function monthDiff(dataInicial, dataFinal){
-    const meses = (dataFinal.getFullYear()-dataInicial.getFullYear())*12 + (dataFinal.getMonth()-dataInicial.getMonth());
-    return Math.max(0, meses);
   }
 
   /* =========================================================
@@ -697,48 +893,89 @@
 
   document.querySelectorAll('.money-input').forEach(attachMoneyMask);
 
+  // Campos de percentual (Juros/Spread, índice) usam texto + inputmode="decimal" em vez de
+  // type="number": em muitos teclados de celular um <input type="number"> rejeita a vírgula
+  // decimal, então o corretor não conseguia digitar "0,5". Aqui só filtramos caracteres
+  // inválidos (mantendo dígitos, vírgula e ponto) e aceitamos os dois separadores na leitura.
+  function attachPercentMask(el){
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/[^0-9.,]/g, '');
+    });
+  }
+  function getPercentValue(el){
+    return parseFloat(el.value.replace(',', '.')) || 0;
+  }
+
+  document.querySelectorAll('.pct-input').forEach(attachPercentMask);
+
+  // Seleciona o conteúdo ao focar, para que digitar substitua o valor (geralmente "0")
+  // em vez de inserir no meio dele — comum em campos numéricos com valor padrão. Também
+  // desativa autocomplete: alguns teclados de celular tentam autopreencher campos numéricos
+  // (ex.: como se fossem cartão/telefone), o que atrapalha a máscara.
+  document.querySelectorAll('.pct-input, .money-input').forEach(el => {
+    el.addEventListener('focus', () => el.select());
+    el.setAttribute('autocomplete', 'off');
+    el.setAttribute('autocorrect', 'off');
+    el.setAttribute('spellcheck', 'false');
+  });
+
   /* =========================================================
    *  CONFIGURAÇÃO DE ÍNDICES (editável na UI, fácil de ajustar)
    * ========================================================= */
 
-  // Objeto central de índices — percentuais mensais. Atualize os valores (ou via UI) quando novos índices saírem.
-  const indices = { FG: 0.69, IPCA: 0, INPC: 0, IGPM: 0 };
-
-  function lerIndices(){
-    indices.FG = parseFloat(document.getElementById('idxFG').value) || 0;
-    indices.IPCA = parseFloat(document.getElementById('idxIPCA').value) || 0;
-    indices.INPC = parseFloat(document.getElementById('idxINPC').value) || 0;
-    indices.IGPM = parseFloat(document.getElementById('idxIGPM').value) || 0;
-  }
+  // Objeto central de índices públicos — percentuais mensais fixos. Atualize aqui quando sair novo valor.
+  const NOME_INDICE = { igpm: 'IGP-M', incc: 'INCC', ipca: 'IPCA', inpc: 'INPC' };
 
   /* =========================================================
    *  APLICAÇÃO DE CORREÇÃO
    * ========================================================= */
 
-  // Calcula a correção (juros compostos mensais) de uma parcela conforme o tipo de reajuste escolhido.
-  function aplicarCorrecao(valorOriginal, tipoCorrecao, meses, outroPercentual){
-    let rateFG = 0, rateIndice = 0;
-    switch(tipoCorrecao){
-      case 'fg': rateFG = indices.FG/100; break;
-      case 'ipca': rateIndice = indices.IPCA/100; break;
-      case 'inpc': rateIndice = indices.INPC/100; break;
-      case 'igpm': rateIndice = indices.IGPM/100; break;
-      case 'outro': rateIndice = (outroPercentual||0)/100; break;
-      case 'fg_ipca': rateFG = indices.FG/100; rateIndice = indices.IPCA/100; break;
-      case 'fg_inpc': rateFG = indices.FG/100; rateIndice = indices.INPC/100; break;
-      case 'fg_igpm': rateFG = indices.FG/100; rateIndice = indices.IGPM/100; break;
-      case 'fg_outro': rateFG = indices.FG/100; rateIndice = (outroPercentual||0)/100; break;
-      default: break; // 'nenhuma'
-    }
-    const corrFG = valorOriginal * (Math.pow(1+rateFG, meses) - 1);
-    const corrIndice = valorOriginal * (Math.pow(1+rateIndice, meses) - 1);
-    const corrTotal = corrFG + corrIndice;
-    return { corrFG, corrIndice, corrTotal, valorFinal: valorOriginal + corrTotal };
+  // Aplica a correção a cada parcela de um grupo (entrada, mensal, bimestral, semestral ou
+  // anual), em sequência:
+  // - Correção do índice = valor da parcela anterior (já corrigida) x taxa do índice escolhido.
+  // - Juros/Spread = valor inicial da própria parcela x taxa de juros/spread informada.
+  // - Valor final da parcela = valor da parcela anterior + correção do índice + juros/spread.
+  // A 1ª parcela elegível usa o próprio valor original como "parcela anterior".
+  function aplicarCorrecaoGrupo(parcelas){
+    let valorAnterior = null;
+    parcelas.forEach(p => {
+      const elegivel = p.indiceNoGrupo >= p.corrigirApartirDe;
+      if(!elegivel){
+        p.jurosSpread = 0;
+        p.corrIndice = 0;
+        p.corrTotal = 0;
+        p.valorFinal = p.valorOriginal;
+        valorAnterior = p.valorFinal;
+        return;
+      }
+      const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
+      const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
+      const corrIndice = base * taxaIndice;
+      const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100);
+      p.jurosSpread = jurosSpread;
+      p.corrIndice = corrIndice;
+      p.corrTotal = jurosSpread + corrIndice;
+      p.valorFinal = base + p.corrTotal;
+      valorAnterior = p.valorFinal;
+    });
+    return parcelas;
   }
 
   /* =========================================================
    *  LEITURA / SINCRONIZAÇÃO DE CAMPOS CONDICIONAIS
    * ========================================================= */
+
+  // Mostra/esconde os campos de quantidade/valor total/valor por parcela conforme o modo escolhido,
+  // e habilita/desabilita o fieldset do grupo periódico (mensal, bimestral, semestral ou anual).
+  function atualizarVisibilidadeGrupoPeriodico(prefixo){
+    const idPrefix = prefixo.charAt(0).toLowerCase() + prefixo.slice(1);
+    const habilitado = document.getElementById(`chk${prefixo}Habilitado`).checked;
+    document.getElementById(`${idPrefix}Fieldset`).disabled = !habilitado;
+    const modo = document.getElementById(`sel${prefixo}Modo`).value;
+    document.getElementById(`${idPrefix}QtdWrap`).style.display = modo.startsWith('qtd') ? '' : 'none';
+    document.getElementById(`${idPrefix}TotalWrap`).style.display = (modo==='qtd_total'||modo==='total_parcela') ? '' : 'none';
+    document.getElementById(`${idPrefix}ParcelaWrap`).style.display = (modo==='qtd_parcela'||modo==='total_parcela') ? '' : 'none';
+  }
 
   function atualizarCamposDependentes(){
     const tipoEntrada = document.querySelector('input[name="entradaTipo"]:checked').value;
@@ -751,28 +988,55 @@
       const inpParcela = document.getElementById('inpEntradaValorParcela');
       inpTotal.readOnly = modo !== 'total';
       inpParcela.readOnly = modo !== 'parcela';
+      document.getElementById('entradaValorParcelaWrap').style.display = modo === 'individual' ? 'none' : '';
+      document.getElementById('entradaIndividualWrap').style.display = modo === 'individual' ? '' : 'none';
+      if(modo === 'individual'){
+        const dataAssinatura = parseDateInput(document.getElementById('inpContratoData').value);
+        sincronizarListaIndividualEntrada(dataAssinatura);
+      }
+    } else {
+      document.getElementById('entradaIndividualWrap').style.display = 'none';
     }
 
-    const corrEntrada = document.getElementById('selCorrecaoEntrada').value;
-    document.getElementById('outroEntradaWrap').style.display = (corrEntrada==='outro'||corrEntrada==='fg_outro') ? '' : 'none';
+    const jurosEntrada = getPercentValue(document.getElementById('inpJurosEntrada'));
+    const indiceEntrada = document.getElementById('selIndiceEntrada').value;
+    document.getElementById('entradaCorrecaoHint').style.display =
+      (tipoEntrada === 'parcelada' && (jurosEntrada > 0 || indiceEntrada !== 'nenhum')) ? '' : 'none';
 
-    const mensaisOn = document.getElementById('chkMensaisHabilitado').checked;
-    document.getElementById('mensaisFieldset').disabled = !mensaisOn;
-    const modoMensais = document.getElementById('selMensaisModo').value;
-    document.getElementById('mensaisQtdWrap').style.display = modoMensais.startsWith('qtd') ? '' : 'none';
-    document.getElementById('mensaisTotalWrap').style.display = (modoMensais==='qtd_total'||modoMensais==='total_parcela') ? '' : 'none';
-    document.getElementById('mensaisParcelaWrap').style.display = (modoMensais==='qtd_parcela'||modoMensais==='total_parcela') ? '' : 'none';
-    const corrMensais = document.getElementById('selCorrecaoMensais').value;
-    document.getElementById('outroMensaisWrap').style.display = (corrMensais==='outro'||corrMensais==='fg_outro') ? '' : 'none';
+    atualizarVisibilidadeGrupoPeriodico('Mensais');
+    atualizarVisibilidadeGrupoPeriodico('Bimestrais');
+    atualizarVisibilidadeGrupoPeriodico('Semestrais');
+    atualizarVisibilidadeGrupoPeriodico('Anuais');
+  }
 
-    const semestraisOn = document.getElementById('chkSemestraisHabilitado').checked;
-    document.getElementById('semestraisFieldset').disabled = !semestraisOn;
-    const modoSemestrais = document.getElementById('selSemestraisModo').value;
-    document.getElementById('semestraisQtdWrap').style.display = modoSemestrais.startsWith('qtd') ? '' : 'none';
-    document.getElementById('semestraisTotalWrap').style.display = (modoSemestrais==='qtd_total'||modoSemestrais==='total_parcela') ? '' : 'none';
-    document.getElementById('semestraisParcelaWrap').style.display = (modoSemestrais==='qtd_parcela'||modoSemestrais==='total_parcela') ? '' : 'none';
-    const corrSemestrais = document.getElementById('selCorrecaoSemestrais').value;
-    document.getElementById('outroSemestraisWrap').style.display = (corrSemestrais==='outro'||corrSemestrais==='fg_outro') ? '' : 'none';
+  /* =========================================================
+   *  LISTA DE VALORES INDIVIDUAIS DA ENTRADA (parcelas com valores diferentes)
+   * ========================================================= */
+
+  // Garante que existam exatamente "qtd" campos de valor, preservando o que já foi digitado.
+  function sincronizarListaIndividualEntrada(dataAssinatura){
+    const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
+    const dataStr = document.getElementById('inpEntradaData').value;
+    const dataInicial = dataStr ? parseDateInput(dataStr) : dataAssinatura;
+    const list = document.getElementById('entradaIndividualList');
+
+    let linhas = list.querySelectorAll('.entrada-individual-row');
+    for(let i = linhas.length - 1; i >= qtd; i--){ linhas[i].remove(); }
+    for(let i = linhas.length; i < qtd; i++){
+      const row = document.createElement('div');
+      row.className = 'field entrada-individual-row';
+      row.innerHTML = `
+        <label>Parcela ${i+1} <span class="individual-data" style="font-weight:400;color:var(--text-faint);"></span></label>
+        <div class="money-field"><span class="prefix">R$</span>
+          <input type="text" inputmode="numeric" class="money-input entrada-individual-input" value="0,00">
+        </div>`;
+      list.appendChild(row);
+      attachMoneyMask(row.querySelector('input'));
+    }
+    linhas = list.querySelectorAll('.entrada-individual-row');
+    linhas.forEach((row, i) => {
+      row.querySelector('.individual-data').textContent = '· venc. ' + formatMonthYear(addMonths(dataInicial, i));
+    });
   }
 
   /* =========================================================
@@ -781,15 +1045,16 @@
 
   function calcularEntrada(dataAssinatura){
     const tipo = document.querySelector('input[name="entradaTipo"]:checked').value;
-    const correcaoTipo = document.getElementById('selCorrecaoEntrada').value;
-    const outroPct = parseFloat(document.getElementById('inpOutroEntrada').value) || 0;
+    const jurosSpreadPct = getPercentValue(document.getElementById('inpJurosEntrada'));
+    const indiceTipo = document.getElementById('selIndiceEntrada').value;
+    const indicePct = getPercentValue(document.getElementById('inpIndicePctEntrada'));
     const parcelas = [];
 
     if(tipo === 'avista'){
       const dataStr = document.getElementById('inpEntradaAvistaData').value;
       const data = dataStr ? parseDateInput(dataStr) : dataAssinatura;
       const valor = getMoneyValue(document.getElementById('inpEntradaAvistaValor'));
-      parcelas.push({ data, valorOriginal: valor });
+      parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1 });
     } else {
       const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
       const dataStr = document.getElementById('inpEntradaData').value;
@@ -800,22 +1065,29 @@
         const total = getMoneyValue(document.getElementById('inpEntradaValorTotal'));
         valores = distribuirValor(total, qtd);
         setMoneyValue(document.getElementById('inpEntradaValorParcela'), valores[0]);
-      } else {
+      } else if(modo === 'parcela'){
         const parcela = getMoneyValue(document.getElementById('inpEntradaValorParcela'));
         valores = new Array(qtd).fill(parcela);
         setMoneyValue(document.getElementById('inpEntradaValorTotal'), parcela*qtd);
+      } else { // individual: cada parcela tem seu próprio valor informado pelo corretor
+        valores = Array.from(document.querySelectorAll('#entradaIndividualList .entrada-individual-input'), getMoneyValue);
+        setMoneyValue(document.getElementById('inpEntradaValorTotal'), valores.reduce((a,b) => a+b, 0));
       }
       for(let i=0;i<qtd;i++){
-        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i] });
+        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i], indiceNoGrupo: i+1 });
       }
     }
 
-    parcelas.forEach(p => { p.tipo = 'Entrada'; p.correcaoTipo = correcaoTipo; p.outroPct = outroPct; });
+    // Regra fixa: a 1ª parcela da entrada nunca recebe correção; as demais seguem normalmente.
+    parcelas.forEach(p => {
+      p.tipo = 'Entrada'; p.jurosSpreadPct = jurosSpreadPct; p.indiceTipo = indiceTipo; p.indicePct = indicePct;
+      p.corrigirApartirDe = 2;
+    });
     return parcelas;
   }
 
   /* =========================================================
-   *  CÁLCULO DE UM GRUPO PERIÓDICO (mensal ou semestral)
+   *  CÁLCULO DE UM GRUPO PERIÓDICO (mensal, bimestral, semestral ou anual)
    * ========================================================= */
 
   function calcularGrupoPeriodico(prefixo, tipoLabel, passoMeses, dataAssinatura){
@@ -850,15 +1122,19 @@
 
     if(qtd <= 0) return [];
 
-    const correcaoTipo = document.getElementById(`selCorrecao${prefixo}`).value;
-    const outroPct = parseFloat(document.getElementById(`inpOutro${prefixo}`).value) || 0;
+    const jurosSpreadPct = getPercentValue(document.getElementById(`inpJuros${prefixo}`));
+    const indiceTipo = document.getElementById(`selIndice${prefixo}`).value;
+    const indicePct = getPercentValue(document.getElementById(`inpIndicePct${prefixo}`));
+    const corrigirApartirDe = Math.max(1, parseInt(document.getElementById(`inp${prefixo}CorrigirDe`).value,10) || 1);
     const parcelas = [];
     for(let i=0;i<qtd;i++){
       parcelas.push({
         tipo: tipoLabel,
         data: addMonths(dataInicial, i*passoMeses),
         valorOriginal: valores[i],
-        correcaoTipo, outroPct
+        jurosSpreadPct, indiceTipo, indicePct,
+        indiceNoGrupo: i+1,
+        corrigirApartirDe
       });
     }
     return parcelas;
@@ -867,8 +1143,14 @@
   function calcularMensais(dataAssinatura){
     return calcularGrupoPeriodico('Mensais', 'Mensal', 1, dataAssinatura);
   }
+  function calcularBimestrais(dataAssinatura){
+    return calcularGrupoPeriodico('Bimestrais', 'Bimestral', 2, dataAssinatura);
+  }
   function calcularSemestrais(dataAssinatura){
     return calcularGrupoPeriodico('Semestrais', 'Semestral', 6, dataAssinatura);
+  }
+  function calcularAnuais(dataAssinatura){
+    return calcularGrupoPeriodico('Anuais', 'Anual', 12, dataAssinatura);
   }
 
   /* =========================================================
@@ -877,20 +1159,21 @@
 
   let ultimoCronograma = [];
 
-  function gerarTabela(entrada, mensais, semestrais, dataAssinatura){
-    const prioridade = { Entrada:0, Mensal:1, Semestral:2 };
-    const todas = [...entrada, ...mensais, ...semestrais];
+  function gerarTabela(entrada, mensais, bimestrais, semestrais, anuais){
+    // A correção por índice depende da parcela anterior do mesmo grupo, então é calculada
+    // sequencialmente dentro de cada grupo antes de mesclar e ordenar o cronograma completo.
+    aplicarCorrecaoGrupo(entrada);
+    aplicarCorrecaoGrupo(mensais);
+    aplicarCorrecaoGrupo(bimestrais);
+    aplicarCorrecaoGrupo(semestrais);
+    aplicarCorrecaoGrupo(anuais);
+
+    const prioridade = { Entrada:0, Mensal:1, Bimestral:2, Semestral:3, Anual:4 };
+    const todas = [...entrada, ...mensais, ...bimestrais, ...semestrais, ...anuais];
     todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
 
     let saldo = 0;
-    todas.forEach((p, i) => {
-      const meses = monthDiff(dataAssinatura, p.data);
-      const corr = aplicarCorrecao(p.valorOriginal, p.correcaoTipo, meses, p.outroPct);
-      p.numero = i+1;
-      p.corrFG = corr.corrFG;
-      p.corrIndice = corr.corrIndice;
-      p.corrTotal = corr.corrTotal;
-      p.valorFinal = corr.valorFinal;
+    todas.forEach(p => {
       saldo += p.valorFinal;
       p.saldoAcumulado = saldo;
     });
@@ -900,13 +1183,23 @@
     return todas;
   }
 
-  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Semestral:'tag-semestral' };
+  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Bimestral:'tag-bimestral', Semestral:'tag-semestral', Anual:'tag-anual' };
+
+  // Se todas as parcelas com índice ativo usam o mesmo índice, o cabeçalho da coluna mostra o
+  // nome desse índice (ex.: "Correção IGP-M"); caso contrário, mantém o rótulo genérico.
+  function atualizarCabecalhoIndice(todas){
+    const tiposUsados = new Set(todas.filter(p => p.corrIndice !== 0 && p.indiceTipo && p.indiceTipo !== 'nenhum').map(p => p.indiceTipo));
+    const th = document.getElementById('thCorrecaoIndice');
+    th.textContent = tiposUsados.size === 1 ? `Correção ${NOME_INDICE[[...tiposUsados][0]]}` : 'Correção Índice';
+  }
 
   function renderTabela(todas){
     const tbody = document.getElementById('tbodyCronograma');
     const tfoot = document.getElementById('tfootCronograma');
     const empty = document.getElementById('emptyState');
     const table = document.getElementById('tabelaCronograma');
+
+    atualizarCabecalhoIndice(todas);
 
     if(todas.length === 0){
       tbody.innerHTML = '';
@@ -920,11 +1213,11 @@
 
     tbody.innerHTML = todas.map(p => `
       <tr>
-        <td>${String(p.numero).padStart(3,'0')}</td>
+        <td>${String(p.indiceNoGrupo).padStart(3,'0')}</td>
         <td><span class="tag ${tagClass[p.tipo]}">${p.tipo}</span></td>
         <td>${formatMonthYear(p.data)}</td>
         <td>${formatMoneyBRL(p.valorOriginal)}</td>
-        <td>${formatMoneyBRL(p.corrFG)}</td>
+        <td>${formatMoneyBRL(p.jurosSpread)}</td>
         <td>${formatMoneyBRL(p.corrIndice)}</td>
         <td>${formatMoneyBRL(p.corrTotal)}</td>
         <td><strong>${formatMoneyBRL(p.valorFinal)}</strong></td>
@@ -937,7 +1230,7 @@
       <tr>
         <td colspan="3">TOTAL GERAL (${todas.length} parcelas)</td>
         <td>${formatMoneyBRL(soma('valorOriginal'))}</td>
-        <td>${formatMoneyBRL(soma('corrFG'))}</td>
+        <td>${formatMoneyBRL(soma('jurosSpread'))}</td>
         <td>${formatMoneyBRL(soma('corrIndice'))}</td>
         <td>${formatMoneyBRL(soma('corrTotal'))}</td>
         <td>${formatMoneyBRL(soma('valorFinal'))}</td>
@@ -950,16 +1243,18 @@
    *  ATUALIZAÇÃO DO RESUMO FINANCEIRO
    * ========================================================= */
 
-  function atualizarResumo(todas, entrada, mensais, semestrais){
+  function atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais){
     const contratoTotal = getMoneyValue(document.getElementById('inpContratoTotal'));
     const somaGrupo = (arr) => arr.reduce((acc,p) => acc + p.valorOriginal, 0);
 
     const entradaNominal = somaGrupo(entrada);
     const mensaisNominal = somaGrupo(mensais);
+    const bimestraisNominal = somaGrupo(bimestrais);
     const semestraisNominal = somaGrupo(semestrais);
-    const totalNominal = entradaNominal + mensaisNominal + semestraisNominal;
+    const anuaisNominal = somaGrupo(anuais);
+    const totalNominal = entradaNominal + mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal;
     const financiado = contratoTotal - entradaNominal;
-    const somaParcelas = mensaisNominal + semestraisNominal;
+    const somaParcelas = mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal;
     const diferenca = contratoTotal - totalNominal;
 
     const totalCorrigido = todas.reduce((acc,p) => acc + p.valorFinal, 0);
@@ -978,7 +1273,9 @@
     document.getElementById('resValorContrato').textContent = formatMoneyBRL(contratoTotal);
     document.getElementById('resEntrada').textContent = formatMoneyBRL(entradaNominal);
     document.getElementById('resMensais').textContent = formatMoneyBRL(mensaisNominal);
+    document.getElementById('resBimestrais').textContent = formatMoneyBRL(bimestraisNominal);
     document.getElementById('resSemestrais').textContent = formatMoneyBRL(semestraisNominal);
+    document.getElementById('resAnuais').textContent = formatMoneyBRL(anuaisNominal);
     document.getElementById('resFinanciado').textContent = formatMoneyBRL(financiado);
     document.getElementById('resCorrecoes').textContent = formatMoneyBRL(totalCorrecoes);
     document.getElementById('resTotalCorrigido').textContent = formatMoneyBRL(totalCorrigido);
@@ -1002,14 +1299,15 @@
    * ========================================================= */
 
   function recalcularTudo(){
-    lerIndices();
     atualizarCamposDependentes();
     const dataAssinatura = parseDateInput(document.getElementById('inpContratoData').value);
     const entrada = calcularEntrada(dataAssinatura);
     const mensais = calcularMensais(dataAssinatura);
+    const bimestrais = calcularBimestrais(dataAssinatura);
     const semestrais = calcularSemestrais(dataAssinatura);
-    const todas = gerarTabela(entrada, mensais, semestrais, dataAssinatura);
-    atualizarResumo(todas, entrada, mensais, semestrais);
+    const anuais = calcularAnuais(dataAssinatura);
+    const todas = gerarTabela(entrada, mensais, bimestrais, semestrais, anuais);
+    atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais);
   }
 
   document.getElementById('formArea').addEventListener('input', recalcularTudo);
@@ -1032,8 +1330,10 @@
     document.querySelector('input[name="entradaModoValor"][value="total"]').checked = true;
     setMoneyValue(document.getElementById('inpEntradaValorTotal'), 0);
     setMoneyValue(document.getElementById('inpEntradaValorParcela'), 0);
-    document.getElementById('selCorrecaoEntrada').value = 'nenhuma';
-    document.getElementById('inpOutroEntrada').value = 0;
+    document.getElementById('entradaIndividualList').innerHTML = '';
+    document.getElementById('inpJurosEntrada').value = 0;
+    document.getElementById('selIndiceEntrada').value = 'nenhum';
+    document.getElementById('inpIndicePctEntrada').value = 0;
 
     document.getElementById('chkMensaisHabilitado').checked = true;
     document.getElementById('selMensaisModo').value = 'qtd_total';
@@ -1041,8 +1341,21 @@
     document.getElementById('inpMensaisQtd').value = 12;
     setMoneyValue(document.getElementById('inpMensaisValorTotal'), 0);
     setMoneyValue(document.getElementById('inpMensaisValorParcela'), 0);
-    document.getElementById('selCorrecaoMensais').value = 'nenhuma';
-    document.getElementById('inpOutroMensais').value = 0;
+    document.getElementById('inpJurosMensais').value = 0;
+    document.getElementById('selIndiceMensais').value = 'nenhum';
+    document.getElementById('inpIndicePctMensais').value = 0;
+    document.getElementById('inpMensaisCorrigirDe').value = 1;
+
+    document.getElementById('chkBimestraisHabilitado').checked = false;
+    document.getElementById('selBimestraisModo').value = 'qtd_total';
+    document.getElementById('inpBimestraisData').value = toISODate(addMonths(hoje,2));
+    document.getElementById('inpBimestraisQtd').value = 6;
+    setMoneyValue(document.getElementById('inpBimestraisValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpBimestraisValorParcela'), 0);
+    document.getElementById('inpJurosBimestrais').value = 0;
+    document.getElementById('selIndiceBimestrais').value = 'nenhum';
+    document.getElementById('inpIndicePctBimestrais').value = 0;
+    document.getElementById('inpBimestraisCorrigirDe').value = 1;
 
     document.getElementById('chkSemestraisHabilitado').checked = false;
     document.getElementById('selSemestraisModo').value = 'qtd_total';
@@ -1050,8 +1363,21 @@
     document.getElementById('inpSemestraisQtd').value = 2;
     setMoneyValue(document.getElementById('inpSemestraisValorTotal'), 0);
     setMoneyValue(document.getElementById('inpSemestraisValorParcela'), 0);
-    document.getElementById('selCorrecaoSemestrais').value = 'nenhuma';
-    document.getElementById('inpOutroSemestrais').value = 0;
+    document.getElementById('inpJurosSemestrais').value = 0;
+    document.getElementById('selIndiceSemestrais').value = 'nenhum';
+    document.getElementById('inpIndicePctSemestrais').value = 0;
+    document.getElementById('inpSemestraisCorrigirDe').value = 1;
+
+    document.getElementById('chkAnuaisHabilitado').checked = false;
+    document.getElementById('selAnuaisModo').value = 'qtd_total';
+    document.getElementById('inpAnuaisData').value = toISODate(addMonths(hoje,12));
+    document.getElementById('inpAnuaisQtd').value = 2;
+    setMoneyValue(document.getElementById('inpAnuaisValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpAnuaisValorParcela'), 0);
+    document.getElementById('inpJurosAnuais').value = 0;
+    document.getElementById('selIndiceAnuais').value = 'nenhum';
+    document.getElementById('inpIndicePctAnuais').value = 0;
+    document.getElementById('inpAnuaisCorrigirDe').value = 1;
 
     recalcularTudo();
   }
@@ -1074,6 +1400,19 @@
    *  EXPORTAÇÃO PDF (via janela de impressão)
    * ========================================================= */
 
+  // Lista os índices de correção efetivamente selecionados em qualquer grupo de parcelas,
+  // com o percentual usado em cada um (deduplicado por índice + percentual).
+  function gerarResumoIndicesUsados(){
+    const combos = new Map();
+    ultimoCronograma.forEach(p => {
+      if(p.indiceTipo && p.indiceTipo !== 'nenhum'){
+        const chave = `${p.indiceTipo}|${p.indicePct}`;
+        combos.set(chave, `${NOME_INDICE[p.indiceTipo]} (${(p.indicePct||0).toLocaleString('pt-BR')}% a.m.)`);
+      }
+    });
+    return combos.size === 0 ? 'Nenhum índice de correção aplicado' : [...combos.values()].join(', ');
+  }
+
   function montarHtmlRelatorio(){
     const contratoTotal = formatMoneyBRL(getMoneyValue(document.getElementById('inpContratoTotal')));
     const resumoHtml = document.getElementById('cardResumo').outerHTML;
@@ -1083,11 +1422,13 @@
       <title>Simulação de Parcelas — Relatório</title>
       <style>
         body{ font-family: Arial, sans-serif; color:#1c2a3a; padding:28px; }
+        .report-header{ display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+        .report-header svg{ height:56px; width:auto; flex-shrink:0; }
         h1{ font-size:20px; margin:0 0 4px; }
         p.sub{ color:#666; font-size:12px; margin:0 0 20px; }
         table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:18px; }
         th,td{ border:1px solid #dde3ec; padding:7px 9px; text-align:right; }
-        th{ background:#123a70; color:#fff; }
+        th{ background:#0c4750; color:#fff; }
         th:nth-child(-n+2), td:nth-child(-n+2){ text-align:left; }
         tfoot td{ font-weight:bold; background:#f6f8fb; }
         .card{ border:1px solid #dde3ec; border-radius:8px; padding:14px 18px; max-width:420px; }
@@ -1097,13 +1438,21 @@
         .status-badge.ok{ background:#eafaf0; color:#16a34a; }
         .status-badge.bad{ background:#fdecec; color:#dc2626; }
         .tag{ padding:2px 8px; border-radius:20px; font-size:10px; font-weight:bold; }
-        .tag-entrada{ background:#e8f0fc; color:#1d4d8f; }
+        .tag-entrada{ background:#e3f0f1; color:#0f5b66; }
         .tag-mensal{ background:#eafaf0; color:#16a34a; }
+        .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
         .tag-semestral{ background:#fef3e2; color:#b45309; }
+        .tag-anual{ background:#fdecec; color:#dc2626; }
       </style></head>
       <body>
-        <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
-        <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+        <div class="report-header">
+          ${FG_LOGO_FULL_SVG}
+          <div>
+            <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
+            <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+            <p class="sub"><strong>Índices de correção utilizados:</strong> ${gerarResumoIndicesUsados()}</p>
+          </div>
+        </div>
         ${resumoHtml}
         ${tabelaHtml}
         ${emptyHtml}
@@ -1235,16 +1584,16 @@
 
   function gerarLinhasPlanilha(){
     const rows = [];
-    rows.push(['Nº','Tipo','Vencimento','Valor Original','Correção 0,69%','Correção Índice','Total Correção','Valor Final','Saldo Acumulado']);
+    rows.push(['Nº','Tipo','Vencimento','Valor Original','Juros/Spread', document.getElementById('thCorrecaoIndice').textContent,'Total Correção','Valor Final','Saldo Acumulado']);
     ultimoCronograma.forEach(p => {
       rows.push([
-        p.numero, p.tipo, formatMonthYear(p.data),
-        Number(p.valorOriginal.toFixed(2)), Number(p.corrFG.toFixed(2)), Number(p.corrIndice.toFixed(2)),
+        p.indiceNoGrupo, p.tipo, formatMonthYear(p.data),
+        Number(p.valorOriginal.toFixed(2)), Number(p.jurosSpread.toFixed(2)), Number(p.corrIndice.toFixed(2)),
         Number(p.corrTotal.toFixed(2)), Number(p.valorFinal.toFixed(2)), Number(p.saldoAcumulado.toFixed(2))
       ]);
     });
     const soma = (campo) => Number(ultimoCronograma.reduce((a,p) => a+p[campo], 0).toFixed(2));
-    rows.push(['', 'TOTAL GERAL', '', soma('valorOriginal'), soma('corrFG'), soma('corrIndice'), soma('corrTotal'), soma('valorFinal'), '']);
+    rows.push(['', 'TOTAL GERAL', '', soma('valorOriginal'), soma('jurosSpread'), soma('corrIndice'), soma('corrTotal'), soma('valorFinal'), '']);
     return rows;
   }
 
