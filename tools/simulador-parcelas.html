@@ -936,7 +936,8 @@
   //   nº de meses do passo do grupo (1 para mensal, 2 para bimestral, 6 para semestral, 12 para
   //   anual) — o índice corrige desde o início do contrato, então cada parcela acumula os meses
   //   inteiros decorridos desde a referência anterior, não apenas um mês.
-  // - Juros/Spread = valor inicial da própria parcela x taxa de juros/spread informada.
+  // - Juros/Spread = valor inicial da própria parcela x taxa de juros/spread informada x mesmo
+  //   nº de meses do passo do grupo, pela mesma razão (taxa mensal aplicada ao período todo).
   // - Valor final da parcela = valor da parcela anterior + correção do índice + juros/spread.
   // A 1ª parcela elegível usa o próprio valor original como "parcela anterior".
   function aplicarCorrecaoGrupo(parcelas){
@@ -954,7 +955,7 @@
       const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
       const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
       const corrIndice = base * taxaIndice * (p.passoMeses || 1);
-      const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100);
+      const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100) * (p.passoMeses || 1);
       p.jurosSpread = jurosSpread;
       p.corrIndice = corrIndice;
       p.corrTotal = jurosSpread + corrIndice;
