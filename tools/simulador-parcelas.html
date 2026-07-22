@@ -1415,7 +1415,20 @@
         combos.set(chave, `${NOME_INDICE[p.indiceTipo]} (${(p.indicePct||0).toLocaleString('pt-BR')}% a.m.)`);
       }
     });
-    return combos.size === 0 ? 'Nenhum índice de correção aplicado' : [...combos.values()].join(', ');
+    return combos.size === 0 ? 'Nenhum índice de correção aplicado' : [...combos.values()].join(' · ');
+  }
+
+  // Lista as taxas de Juros/Spread efetivamente configuradas em cada tipo de parcela
+  // (deduplicado por tipo + percentual).
+  function gerarResumoJurosUsados(){
+    const combos = new Map();
+    ultimoCronograma.forEach(p => {
+      if(p.jurosSpreadPct){
+        const chave = `${p.tipo}|${p.jurosSpreadPct}`;
+        combos.set(chave, `${p.tipo}: ${(p.jurosSpreadPct||0).toLocaleString('pt-BR')}% a.m.`);
+      }
+    });
+    return combos.size === 0 ? 'Nenhuma taxa de Juros/Spread aplicada' : [...combos.values()].join(' · ');
   }
 
   function montarHtmlRelatorio(){
@@ -1427,10 +1440,15 @@
       <title>Simulação de Parcelas — Relatório</title>
       <style>
         body{ font-family: Arial, sans-serif; color:#1c2a3a; padding:28px; }
-        .report-header{ display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+        .report-header{ display:flex; align-items:center; gap:16px; margin-bottom:18px; padding-bottom:16px; border-bottom:2px solid #0f5b66; }
         .report-header svg{ height:56px; width:auto; flex-shrink:0; }
         h1{ font-size:20px; margin:0 0 4px; }
-        p.sub{ color:#666; font-size:12px; margin:0 0 20px; }
+        h1 .valor{ color:#0f5b66; }
+        p.sub{ color:#666; font-size:12px; margin:0; }
+        .report-meta{ display:grid; grid-template-columns: repeat(auto-fit, minmax(230px,1fr)); gap:10px; background:#f6f8fb; border:1px solid #dde3ec; border-radius:8px; padding:12px 16px; margin-bottom:20px; }
+        .meta-item{ display:flex; flex-direction:column; gap:3px; }
+        .meta-item .k{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#66768c; }
+        .meta-item .v{ font-size:12.5px; font-weight:600; color:#1c2a3a; }
         table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:18px; }
         th,td{ border:1px solid #dde3ec; padding:7px 9px; text-align:right; }
         th{ background:#0c4750; color:#fff; }
@@ -1453,10 +1471,13 @@
         <div class="report-header">
           ${FG_LOGO_FULL_SVG}
           <div>
-            <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
+            <h1>Simulação de Parcelamento <span class="valor">— ${contratoTotal}</span></h1>
             <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-            <p class="sub"><strong>Índices de correção utilizados:</strong> ${gerarResumoIndicesUsados()}</p>
           </div>
+        </div>
+        <div class="report-meta">
+          <div class="meta-item"><span class="k">Índices de correção utilizados</span><span class="v">${gerarResumoIndicesUsados()}</span></div>
+          <div class="meta-item"><span class="k">Taxas de Juros/Spread utilizadas</span><span class="v">${gerarResumoJurosUsados()}</span></div>
         </div>
         ${resumoHtml}
         ${tabelaHtml}
