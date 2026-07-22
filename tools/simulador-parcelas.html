@@ -786,14 +786,13 @@
     document.getElementById('thCorrecaoFG').textContent = `Correção ${indices.FG.toLocaleString('pt-BR')}%`;
   }
 
-  // Resolve o fator (fração, ex.: 0.015 = 1,5%) da correção por índice para um tipo de correção.
-  // Todos os índices são percentuais mensais fixos, aplicados de forma linear (taxa x meses).
-  function calcularFatorIndice(tipoCorrecao, outroPercentual, meses){
+  // Resolve a taxa do índice (fração, ex.: 0.005 = 0,5%) para um tipo de correção.
+  function resolverTaxaIndice(tipoCorrecao, outroPercentual){
     switch(tipoCorrecao){
-      case 'ipca': case 'fg_ipca': return (indices.IPCA/100) * meses;
-      case 'inpc': case 'fg_inpc': return (indices.INPC/100) * meses;
-      case 'igpm': case 'fg_igpm': return (indices.IGPM/100) * meses;
-      case 'outro': case 'fg_outro': return (outroPercentual||0)/100 * meses;
+      case 'ipca': case 'fg_ipca': return indices.IPCA/100;
+      case 'inpc': case 'fg_inpc': return indices.INPC/100;
+      case 'igpm': case 'fg_igpm': return indices.IGPM/100;
+      case 'outro': case 'fg_outro': return (outroPercentual||0)/100;
       default: return 0;
     }
   }
@@ -802,27 +801,27 @@
    *  APLICAÇÃO DE CORREÇÃO
    * ========================================================= */
 
-  // Calcula a correção (juros compostos mensais) de uma parcela conforme o tipo de reajuste escolhido.
-  // Resolve as taxas mensais (FG e índice) a partir do tipo de correção escolhido.
-  // Aplica a correção a cada parcela de um grupo (entrada, mensal ou semestral).
+  // Aplica a correção a cada parcela de um grupo (entrada, mensal ou semestral), em sequência.
   // 0,69% FG: juros simples sobre o valor original da própria parcela (valor x taxa x meses).
-  // Índice (IPCA/INPC/IGP-M): soma dos percentuais mensais publicados (sem acumular/compor,
-  // negativos contam como 0%) sobre o valor original da própria parcela — não é recursivo.
-  // "Outro índice": percentual manual fixo, linear (valor x taxa x meses).
+  // Índice (IPCA/INPC/IGP-M/outro): incide sobre o valor já corrigido da parcela anterior do
+  // mesmo grupo (ou o valor original, na 1ª parcela elegível) x taxa — sem multiplicar pelos meses.
   function aplicarCorrecaoGrupo(parcelas){
+    let valorFinalAnterior = null;
     parcelas.forEach(p => {
       const elegivel = p.indiceNoGrupo >= p.corrigirApartirDe;
       const meses = elegivel ? monthDiff(p.correcaoAnchorDate, p.data) : 0;
       const usaFG = p.correcaoTipo === 'fg' || p.correcaoTipo.startsWith('fg_');
       const rateFG = usaFG ? indices.FG/100 : 0;
       const corrFG = p.valorOriginal * rateFG * meses;
-      const fatorIndice = elegivel ? calcularFatorIndice(p.correcaoTipo, p.outroPct, meses) : 0;
-      const corrIndice = p.valorOriginal * fatorIndice;
+      const baseIndice = valorFinalAnterior === null ? p.valorOriginal : valorFinalAnterior;
+      const rateIndice = resolverTaxaIndice(p.correcaoTipo, p.outroPct);
+      const corrIndice = elegivel ? baseIndice * rateIndice : 0;
       const corrTotal = corrFG + corrIndice;
       p.corrFG = corrFG;
       p.corrIndice = corrIndice;
       p.corrTotal = corrTotal;
       p.valorFinal = p.valorOriginal + corrTotal;
+      valorFinalAnterior = p.valorFinal;
     });
     return parcelas;
   }
