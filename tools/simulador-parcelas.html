@@ -228,9 +228,22 @@
     .print-only{ display:block !important; }
   }
   .print-only{ display:none; }
+
+  .noscript-banner{
+    background: var(--danger-soft); color: var(--danger); border-bottom: 2px solid var(--danger);
+    padding: 14px 20px; font-size: 14px; font-weight:600; text-align:center;
+  }
 </style>
 </head>
 <body>
+
+<noscript>
+  <div class="noscript-banner">
+    ⚠ Este simulador precisa de JavaScript para funcionar. Se você está vendo esta mensagem em uma
+    pré-visualização de arquivo (ex.: preview do WhatsApp/Telegram/Arquivos no celular), toque no
+    ícone de compartilhar e escolha "Abrir no Safari" ou "Abrir no Chrome".
+  </div>
+</noscript>
 
 <header class="topbar no-print">
   <div class="brand">
@@ -896,9 +909,14 @@
   document.querySelectorAll('.pct-input').forEach(attachPercentMask);
 
   // Seleciona o conteúdo ao focar, para que digitar substitua o valor (geralmente "0")
-  // em vez de inserir no meio dele — comum em campos numéricos com valor padrão.
+  // em vez de inserir no meio dele — comum em campos numéricos com valor padrão. Também
+  // desativa autocomplete: alguns teclados de celular tentam autopreencher campos numéricos
+  // (ex.: como se fossem cartão/telefone), o que atrapalha a máscara.
   document.querySelectorAll('.pct-input, .money-input').forEach(el => {
     el.addEventListener('focus', () => el.select());
+    el.setAttribute('autocomplete', 'off');
+    el.setAttribute('autocorrect', 'off');
+    el.setAttribute('spellcheck', 'false');
   });
 
   /* =========================================================
