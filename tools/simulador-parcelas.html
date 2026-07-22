@@ -202,6 +202,10 @@
   .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
   .tag-semestral{ background:#fef3e2; color:var(--warning); }
   .tag-anual{ background:#fdecec; color:var(--danger); }
+  /* display:table-row-group (em vez do table-footer-group padrão) evita que o navegador
+     repita o rodapé de totais em toda página ao imprimir uma tabela que quebra em várias
+     folhas — assim ele aparece só uma vez, na última linha da última página. */
+  table.cronograma tfoot{ display: table-row-group; }
   table.cronograma tfoot td{
     padding:12px; font-weight:700; background: var(--surface-alt); border-top:2px solid var(--border);
     text-align:right; white-space:nowrap;
@@ -1453,6 +1457,7 @@
         th,td{ border:1px solid #dde3ec; padding:7px 9px; text-align:right; }
         th{ background:#0c4750; color:#fff; }
         th:nth-child(-n+2), td:nth-child(-n+2){ text-align:left; }
+        tfoot{ display: table-row-group; }
         tfoot td{ font-weight:bold; background:#f6f8fb; }
         .card{ border:1px solid #dde3ec; border-radius:8px; padding:14px 18px; max-width:420px; }
         .card-head{ display:none; }
