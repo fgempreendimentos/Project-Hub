@@ -178,9 +178,6 @@
   .status-badge.ok{ background: var(--success-soft); color: var(--success); border:1px solid #bfe8cf; }
   .status-badge.bad{ background: var(--danger-soft); color: var(--danger); border:1px solid #f5c6c2; }
 
-  /* ---------- Indices card ---------- */
-  .idx-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-  .idx-item label{ margin-bottom:5px; }
   .pct-field{ position:relative; }
   .pct-field input{ padding-right: 28px; text-align:right; }
   .pct-field .suffix{ position:absolute; right:11px; top:50%; transform:translateY(-50%); font-size:12.5px; color:var(--text-muted); font-weight:600; }
@@ -378,6 +375,10 @@
                 <option value="inpc">INPC</option>
               </select>
             </div>
+            <div class="field">
+              <label for="inpIndicePctEntrada">Percentual do índice (a.m.)</label>
+              <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctEntrada" value="0"><span class="suffix">%</span></div>
+            </div>
           </div>
           <p class="hint" id="entradaCorrecaoHint" style="display:none;">A 1ª parcela da entrada nunca recebe correção. O reajuste é aplicado automaticamente a partir da 2ª parcela em diante.</p>
         </div>
@@ -444,6 +445,10 @@
                   <option value="ipca">IPCA</option>
                   <option value="inpc">INPC</option>
                 </select>
+              </div>
+              <div class="field">
+                <label for="inpIndicePctMensais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctMensais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="inpMensaisCorrigirDe">Corrigir a partir da parcela nº</label>
@@ -518,6 +523,10 @@
                 </select>
               </div>
               <div class="field">
+                <label for="inpIndicePctBimestrais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctBimestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
                 <label for="inpBimestraisCorrigirDe">Corrigir a partir da parcela nº</label>
                 <input type="number" min="1" step="1" id="inpBimestraisCorrigirDe" value="1">
                 <p class="hint">Padrão: 1 (corrige desde a 1ª parcela bimestral).</p>
@@ -588,6 +597,10 @@
                   <option value="ipca">IPCA</option>
                   <option value="inpc">INPC</option>
                 </select>
+              </div>
+              <div class="field">
+                <label for="inpIndicePctSemestrais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctSemestrais" value="0"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <label for="inpSemestraisCorrigirDe">Corrigir a partir da parcela nº</label>
@@ -662,6 +675,10 @@
                 </select>
               </div>
               <div class="field">
+                <label for="inpIndicePctAnuais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="number" step="0.0001" min="0" id="inpIndicePctAnuais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
                 <label for="inpAnuaisCorrigirDe">Corrigir a partir da parcela nº</label>
                 <input type="number" min="1" step="1" id="inpAnuaisCorrigirDe" value="1">
                 <p class="hint">Padrão: 1 (corrige desde a 1ª parcela anual).</p>
@@ -692,31 +709,6 @@
             <div class="resumo-row"><span class="lbl">Diferença p/ contrato</span><span class="val" id="resDiferenca">R$ 0,00</span></div>
           </div>
           <div class="status-badge ok" id="statusBadge">✓ Simulação Fechada</div>
-        </div>
-      </div>
-
-      <div class="card no-print" id="cardIndices">
-        <div class="card-head"><h2><span class="icon">⚙️</span> Configuração de Índices</h2></div>
-        <div class="card-body compact">
-          <p class="hint" style="margin:0 0 12px;">Percentuais mensais fixos (%) dos índices públicos. Atualize aqui quando sair novo valor. O Juros/Spread é definido em cada tipo de parcela.</p>
-          <div class="idx-grid">
-            <div class="idx-item">
-              <label for="idxIGPM">IGP-M</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxIGPM" value="0"><span class="suffix">%</span></div>
-            </div>
-            <div class="idx-item">
-              <label for="idxINCC">INCC</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxINCC" value="0"><span class="suffix">%</span></div>
-            </div>
-            <div class="idx-item">
-              <label for="idxIPCA">IPCA</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxIPCA" value="0"><span class="suffix">%</span></div>
-            </div>
-            <div class="idx-item">
-              <label for="idxINPC">INPC</label>
-              <div class="pct-field"><input type="number" step="0.0001" id="idxINPC" value="0"><span class="suffix">%</span></div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -893,15 +885,6 @@
    * ========================================================= */
 
   // Objeto central de índices públicos — percentuais mensais fixos. Atualize aqui quando sair novo valor.
-  const indices = { IGPM: 0, INCC: 0, IPCA: 0, INPC: 0 };
-
-  function lerIndices(){
-    indices.IGPM = parseFloat(document.getElementById('idxIGPM').value) || 0;
-    indices.INCC = parseFloat(document.getElementById('idxINCC').value) || 0;
-    indices.IPCA = parseFloat(document.getElementById('idxIPCA').value) || 0;
-    indices.INPC = parseFloat(document.getElementById('idxINPC').value) || 0;
-  }
-
   const NOME_INDICE = { igpm: 'IGP-M', incc: 'INCC', ipca: 'IPCA', inpc: 'INPC' };
 
   /* =========================================================
@@ -927,7 +910,7 @@
         return;
       }
       const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
-      const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (indices[p.indiceTipo.toUpperCase()]||0)/100;
+      const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
       const corrIndice = base * taxaIndice;
       const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100);
       p.jurosSpread = jurosSpread;
@@ -1025,6 +1008,7 @@
     const tipo = document.querySelector('input[name="entradaTipo"]:checked').value;
     const jurosSpreadPct = parseFloat(document.getElementById('inpJurosEntrada').value) || 0;
     const indiceTipo = document.getElementById('selIndiceEntrada').value;
+    const indicePct = parseFloat(document.getElementById('inpIndicePctEntrada').value) || 0;
     const parcelas = [];
 
     if(tipo === 'avista'){
@@ -1057,7 +1041,7 @@
 
     // Regra fixa: a 1ª parcela da entrada nunca recebe correção; as demais seguem normalmente.
     parcelas.forEach(p => {
-      p.tipo = 'Entrada'; p.jurosSpreadPct = jurosSpreadPct; p.indiceTipo = indiceTipo;
+      p.tipo = 'Entrada'; p.jurosSpreadPct = jurosSpreadPct; p.indiceTipo = indiceTipo; p.indicePct = indicePct;
       p.corrigirApartirDe = 2;
     });
     return parcelas;
@@ -1101,6 +1085,7 @@
 
     const jurosSpreadPct = parseFloat(document.getElementById(`inpJuros${prefixo}`).value) || 0;
     const indiceTipo = document.getElementById(`selIndice${prefixo}`).value;
+    const indicePct = parseFloat(document.getElementById(`inpIndicePct${prefixo}`).value) || 0;
     const corrigirApartirDe = Math.max(1, parseInt(document.getElementById(`inp${prefixo}CorrigirDe`).value,10) || 1);
     const parcelas = [];
     for(let i=0;i<qtd;i++){
@@ -1108,7 +1093,7 @@
         tipo: tipoLabel,
         data: addMonths(dataInicial, i*passoMeses),
         valorOriginal: valores[i],
-        jurosSpreadPct, indiceTipo,
+        jurosSpreadPct, indiceTipo, indicePct,
         indiceNoGrupo: i+1,
         corrigirApartirDe
       });
@@ -1275,7 +1260,6 @@
    * ========================================================= */
 
   function recalcularTudo(){
-    lerIndices();
     atualizarCamposDependentes();
     const dataAssinatura = parseDateInput(document.getElementById('inpContratoData').value);
     const entrada = calcularEntrada(dataAssinatura);
@@ -1310,6 +1294,7 @@
     document.getElementById('entradaIndividualList').innerHTML = '';
     document.getElementById('inpJurosEntrada').value = 0;
     document.getElementById('selIndiceEntrada').value = 'nenhum';
+    document.getElementById('inpIndicePctEntrada').value = 0;
 
     document.getElementById('chkMensaisHabilitado').checked = true;
     document.getElementById('selMensaisModo').value = 'qtd_total';
@@ -1319,6 +1304,7 @@
     setMoneyValue(document.getElementById('inpMensaisValorParcela'), 0);
     document.getElementById('inpJurosMensais').value = 0;
     document.getElementById('selIndiceMensais').value = 'nenhum';
+    document.getElementById('inpIndicePctMensais').value = 0;
     document.getElementById('inpMensaisCorrigirDe').value = 1;
 
     document.getElementById('chkBimestraisHabilitado').checked = false;
@@ -1329,6 +1315,7 @@
     setMoneyValue(document.getElementById('inpBimestraisValorParcela'), 0);
     document.getElementById('inpJurosBimestrais').value = 0;
     document.getElementById('selIndiceBimestrais').value = 'nenhum';
+    document.getElementById('inpIndicePctBimestrais').value = 0;
     document.getElementById('inpBimestraisCorrigirDe').value = 1;
 
     document.getElementById('chkSemestraisHabilitado').checked = false;
@@ -1339,6 +1326,7 @@
     setMoneyValue(document.getElementById('inpSemestraisValorParcela'), 0);
     document.getElementById('inpJurosSemestrais').value = 0;
     document.getElementById('selIndiceSemestrais').value = 'nenhum';
+    document.getElementById('inpIndicePctSemestrais').value = 0;
     document.getElementById('inpSemestraisCorrigirDe').value = 1;
 
     document.getElementById('chkAnuaisHabilitado').checked = false;
@@ -1349,6 +1337,7 @@
     setMoneyValue(document.getElementById('inpAnuaisValorParcela'), 0);
     document.getElementById('inpJurosAnuais').value = 0;
     document.getElementById('selIndiceAnuais').value = 'nenhum';
+    document.getElementById('inpIndicePctAnuais').value = 0;
     document.getElementById('inpAnuaisCorrigirDe').value = 1;
 
     recalcularTudo();
@@ -1371,6 +1360,19 @@
   /* =========================================================
    *  EXPORTAÇÃO PDF (via janela de impressão)
    * ========================================================= */
+
+  // Lista os índices de correção efetivamente selecionados em qualquer grupo de parcelas,
+  // com o percentual usado em cada um (deduplicado por índice + percentual).
+  function gerarResumoIndicesUsados(){
+    const combos = new Map();
+    ultimoCronograma.forEach(p => {
+      if(p.indiceTipo && p.indiceTipo !== 'nenhum'){
+        const chave = `${p.indiceTipo}|${p.indicePct}`;
+        combos.set(chave, `${NOME_INDICE[p.indiceTipo]} (${(p.indicePct||0).toLocaleString('pt-BR')}% a.m.)`);
+      }
+    });
+    return combos.size === 0 ? 'Nenhum índice de correção aplicado' : [...combos.values()].join(', ');
+  }
 
   function montarHtmlRelatorio(){
     const contratoTotal = formatMoneyBRL(getMoneyValue(document.getElementById('inpContratoTotal')));
@@ -1409,6 +1411,7 @@
           <div>
             <h1>Simulação de Parcelamento — Valor do Contrato: ${contratoTotal}</h1>
             <p class="sub">Gerado em ${formatDateBR(new Date())} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+            <p class="sub"><strong>Índices de correção utilizados:</strong> ${gerarResumoIndicesUsados()}</p>
           </div>
         </div>
         ${resumoHtml}
