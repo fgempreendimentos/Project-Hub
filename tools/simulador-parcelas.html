@@ -932,7 +932,10 @@
 
   // Aplica a correção a cada parcela de um grupo (entrada, mensal, bimestral, semestral ou
   // anual), em sequência:
-  // - Correção do índice = valor da parcela anterior (já corrigida) x taxa do índice escolhido.
+  // - Correção do índice = valor da parcela anterior (já corrigida) x taxa do índice escolhido x
+  //   nº de meses do passo do grupo (1 para mensal, 2 para bimestral, 6 para semestral, 12 para
+  //   anual) — o índice corrige desde o início do contrato, então cada parcela acumula os meses
+  //   inteiros decorridos desde a referência anterior, não apenas um mês.
   // - Juros/Spread = valor inicial da própria parcela x taxa de juros/spread informada.
   // - Valor final da parcela = valor da parcela anterior + correção do índice + juros/spread.
   // A 1ª parcela elegível usa o próprio valor original como "parcela anterior".
@@ -950,7 +953,7 @@
       }
       const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
       const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
-      const corrIndice = base * taxaIndice;
+      const corrIndice = base * taxaIndice * (p.passoMeses || 1);
       const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100);
       p.jurosSpread = jurosSpread;
       p.corrIndice = corrIndice;
@@ -1054,7 +1057,7 @@
       const dataStr = document.getElementById('inpEntradaAvistaData').value;
       const data = dataStr ? parseDateInput(dataStr) : dataAssinatura;
       const valor = getMoneyValue(document.getElementById('inpEntradaAvistaValor'));
-      parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1 });
+      parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1, passoMeses: 1 });
     } else {
       const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
       const dataStr = document.getElementById('inpEntradaData').value;
@@ -1074,7 +1077,7 @@
         setMoneyValue(document.getElementById('inpEntradaValorTotal'), valores.reduce((a,b) => a+b, 0));
       }
       for(let i=0;i<qtd;i++){
-        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i], indiceNoGrupo: i+1 });
+        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i], indiceNoGrupo: i+1, passoMeses: 1 });
       }
     }
 
@@ -1134,7 +1137,8 @@
         valorOriginal: valores[i],
         jurosSpreadPct, indiceTipo, indicePct,
         indiceNoGrupo: i+1,
-        corrigirApartirDe
+        corrigirApartirDe,
+        passoMeses
       });
     }
     return parcelas;
