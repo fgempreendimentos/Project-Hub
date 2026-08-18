@@ -202,6 +202,7 @@
   .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
   .tag-semestral{ background:#fef3e2; color:var(--warning); }
   .tag-anual{ background:#fdecec; color:var(--danger); }
+  .tag-chaves{ background:#dbeafe; color:#2563eb; }
   /* display:table-row-group (em vez do table-footer-group padrão) evita que o navegador
      repita o rodapé de totais em toda página ao imprimir uma tabela que quebra em várias
      folhas — assim ele aparece só uma vez, na última linha da última página. */
@@ -705,6 +706,82 @@
         </div>
       </div>
 
+      <!-- Parcela Chaves -->
+      <div class="card" id="cardChaves">
+        <div class="card-head">
+          <h2><span class="icon">🔑</span> Parcela Chaves</h2>
+          <label class="check-opt"><input type="checkbox" id="chkChavesHabilitado"> Habilitar</label>
+        </div>
+        <div class="card-body">
+          <fieldset id="chavesFieldset" disabled>
+            <div class="field-row">
+              <div class="field">
+                <label for="selChavesModo">Definir por</label>
+                <select id="selChavesModo">
+                  <option value="qtd_total">Quantidade + valor total</option>
+                  <option value="qtd_parcela">Quantidade + valor da parcela</option>
+                  <option value="total_parcela">Valor total + valor da parcela</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpChavesData">1º vencimento</label>
+                <input type="date" id="inpChavesData">
+              </div>
+              <div class="field">
+                <label>Periodicidade</label>
+                <input type="text" value="Chaves (1 em 1 mês)" disabled>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field" id="chavesQtdWrap">
+                <label for="inpChavesQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpChavesQtd" value="1">
+              </div>
+              <div class="field" id="chavesTotalWrap">
+                <label for="inpChavesValorTotal">Valor total destinado às chaves</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpChavesValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field" id="chavesParcelaWrap" style="display:none;">
+                <label for="inpChavesValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpChavesValorParcela" value="0,00">
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Correção das chaves</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="inpJurosChaves">Juros/Spread (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosChaves" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="selIndiceChaves">Índice</label>
+                <select id="selIndiceChaves">
+                  <option value="nenhum">Sem índice</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="incc">INCC</option>
+                  <option value="ipca">IPCA</option>
+                  <option value="inpc">INPC</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpIndicePctChaves">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctChaves" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpChavesCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpChavesCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela de chaves).</p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
     </section>
 
     <!-- ================= COLUNA LATERAL ================= -->
@@ -720,6 +797,7 @@
             <div class="resumo-row"><span class="lbl">Bimestrais</span><span class="val" id="resBimestrais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Semestrais</span><span class="val" id="resSemestrais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Anuais</span><span class="val" id="resAnuais">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Chaves</span><span class="val" id="resChaves">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Valor financiado</span><span class="val" id="resFinanciado">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Total das correções</span><span class="val" id="resCorrecoes">R$ 0,00</span></div>
             <div class="resumo-row total"><span class="lbl">Total corrigido</span><span class="val" id="resTotalCorrigido">R$ 0,00</span></div>
@@ -992,6 +1070,7 @@
     atualizarVisibilidadeGrupoPeriodico('Bimestrais');
     atualizarVisibilidadeGrupoPeriodico('Semestrais');
     atualizarVisibilidadeGrupoPeriodico('Anuais');
+    atualizarVisibilidadeGrupoPeriodico('Chaves');
   }
 
   /* =========================================================
@@ -1138,6 +1217,9 @@
   function calcularAnuais(dataAssinatura){
     return calcularGrupoPeriodico('Anuais', 'Anual', 12, dataAssinatura);
   }
+  function calcularChaves(dataAssinatura){
+    return calcularGrupoPeriodico('Chaves', 'Chaves', 1, dataAssinatura);
+  }
 
   /* =========================================================
    *  GERAÇÃO DA TABELA / CRONOGRAMA
@@ -1145,7 +1227,7 @@
 
   let ultimoCronograma = [];
 
-  function gerarTabela(entrada, mensais, bimestrais, semestrais, anuais){
+  function gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves){
     // A correção por índice depende da parcela anterior do mesmo grupo, então é calculada
     // sequencialmente dentro de cada grupo antes de mesclar e ordenar o cronograma completo.
     aplicarCorrecaoGrupo(entrada);
@@ -1153,9 +1235,10 @@
     aplicarCorrecaoGrupo(bimestrais);
     aplicarCorrecaoGrupo(semestrais);
     aplicarCorrecaoGrupo(anuais);
+    aplicarCorrecaoGrupo(chaves);
 
-    const prioridade = { Entrada:0, Mensal:1, Bimestral:2, Semestral:3, Anual:4 };
-    const todas = [...entrada, ...mensais, ...bimestrais, ...semestrais, ...anuais];
+    const prioridade = { Entrada:0, Mensal:1, Bimestral:2, Semestral:3, Anual:4, Chaves:5 };
+    const todas = [...entrada, ...mensais, ...bimestrais, ...semestrais, ...anuais, ...chaves];
     todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
 
     let saldo = 0;
@@ -1169,7 +1252,7 @@
     return todas;
   }
 
-  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Bimestral:'tag-bimestral', Semestral:'tag-semestral', Anual:'tag-anual' };
+  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Bimestral:'tag-bimestral', Semestral:'tag-semestral', Anual:'tag-anual', Chaves:'tag-chaves' };
 
   // Se todas as parcelas com índice ativo usam o mesmo índice, o cabeçalho da coluna mostra o
   // nome desse índice (ex.: "Correção IGP-M"); caso contrário, mantém o rótulo genérico.
@@ -1229,7 +1312,7 @@
    *  ATUALIZAÇÃO DO RESUMO FINANCEIRO
    * ========================================================= */
 
-  function atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais){
+  function atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais, chaves){
     const contratoTotal = getMoneyValue(document.getElementById('inpContratoTotal'));
     const somaGrupo = (arr) => arr.reduce((acc,p) => acc + p.valorOriginal, 0);
 
@@ -1238,9 +1321,10 @@
     const bimestraisNominal = somaGrupo(bimestrais);
     const semestraisNominal = somaGrupo(semestrais);
     const anuaisNominal = somaGrupo(anuais);
-    const totalNominal = entradaNominal + mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal;
+    const chavesNominal = somaGrupo(chaves);
+    const totalNominal = entradaNominal + mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal + chavesNominal;
     const financiado = contratoTotal - entradaNominal;
-    const somaParcelas = mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal;
+    const somaParcelas = mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal + chavesNominal;
     const diferenca = contratoTotal - totalNominal;
 
     const totalCorrigido = todas.reduce((acc,p) => acc + p.valorFinal, 0);
@@ -1262,6 +1346,7 @@
     document.getElementById('resBimestrais').textContent = formatMoneyBRL(bimestraisNominal);
     document.getElementById('resSemestrais').textContent = formatMoneyBRL(semestraisNominal);
     document.getElementById('resAnuais').textContent = formatMoneyBRL(anuaisNominal);
+    document.getElementById('resChaves').textContent = formatMoneyBRL(chavesNominal);
     document.getElementById('resFinanciado').textContent = formatMoneyBRL(financiado);
     document.getElementById('resCorrecoes').textContent = formatMoneyBRL(totalCorrecoes);
     document.getElementById('resTotalCorrigido').textContent = formatMoneyBRL(totalCorrigido);
@@ -1292,8 +1377,9 @@
     const bimestrais = calcularBimestrais(dataAssinatura);
     const semestrais = calcularSemestrais(dataAssinatura);
     const anuais = calcularAnuais(dataAssinatura);
-    const todas = gerarTabela(entrada, mensais, bimestrais, semestrais, anuais);
-    atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais);
+    const chaves = calcularChaves(dataAssinatura);
+    const todas = gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves);
+    atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais, chaves);
   }
 
   document.getElementById('formArea').addEventListener('input', recalcularTudo);
@@ -1364,6 +1450,17 @@
     document.getElementById('selIndiceAnuais').value = 'nenhum';
     document.getElementById('inpIndicePctAnuais').value = 0;
     document.getElementById('inpAnuaisCorrigirDe').value = 1;
+
+    document.getElementById('chkChavesHabilitado').checked = false;
+    document.getElementById('selChavesModo').value = 'qtd_total';
+    document.getElementById('inpChavesData').value = toISODate(addMonths(hoje,24));
+    document.getElementById('inpChavesQtd').value = 1;
+    setMoneyValue(document.getElementById('inpChavesValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpChavesValorParcela'), 0);
+    document.getElementById('inpJurosChaves').value = 0;
+    document.getElementById('selIndiceChaves').value = 'nenhum';
+    document.getElementById('inpIndicePctChaves').value = 0;
+    document.getElementById('inpChavesCorrigirDe').value = 1;
 
     recalcularTudo();
   }
@@ -1448,6 +1545,7 @@
         .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
         .tag-semestral{ background:#fef3e2; color:#b45309; }
         .tag-anual{ background:#fdecec; color:#dc2626; }
+        .tag-chaves{ background:#dbeafe; color:#2563eb; }
       </style></head>
       <body>
         <div class="report-header">
