@@ -989,18 +989,27 @@
    *  APLICAÇÃO DE CORREÇÃO
    * ========================================================= */
 
-  // Aplica a correção a cada parcela de um grupo (entrada, mensal, bimestral, semestral ou
-  // anual), em sequência:
+  // Diferença inteira em meses entre duas datas (assume mesmo dia do mês, como as datas geradas
+  // por addMonths — usada para saber quantos meses realmente se passaram entre duas referências).
+  function monthDiff(de, para){
+    return (para.getFullYear()-de.getFullYear())*12 + (para.getMonth()-de.getMonth());
+  }
+
+  // Aplica a correção a cada parcela de um grupo (entrada, mensal, bimestral, semestral, anual
+  // ou chaves), em sequência, corrigindo sempre desde o momento da venda (assinatura do
+  // contrato) ou da última referência do próprio grupo:
   // - Correção do índice = valor da parcela anterior (já corrigida) x taxa do índice escolhido x
-  //   nº de meses do passo do grupo (1 para mensal, 2 para bimestral, 6 para semestral, 12 para
-  //   anual) — o índice corrige desde o início do contrato, então cada parcela acumula os meses
-  //   inteiros decorridos desde a referência anterior, não apenas um mês.
+  //   nº de meses realmente decorridos desde a referência anterior (assinatura do contrato, na
+  //   1ª parcela do grupo, ou o vencimento da parcela anterior do mesmo grupo).
   // - Juros/Spread = valor inicial da própria parcela x taxa de juros/spread informada x mesmo
-  //   nº de meses do passo do grupo, pela mesma razão (taxa mensal aplicada ao período todo).
+  //   nº de meses decorridos, pela mesma razão (taxa mensal aplicada ao período todo).
   // - Valor final da parcela = valor da parcela anterior + correção do índice + juros/spread.
-  // A 1ª parcela elegível usa o próprio valor original como "parcela anterior".
-  function aplicarCorrecaoGrupo(parcelas){
+  // A 1ª parcela elegível usa o próprio valor original como "parcela anterior". Parcelas fora da
+  // faixa de correção ("corrigir a partir da parcela nº") também avançam a referência de data,
+  // para que a correção não retroaja quando o reajuste começa mais adiante no grupo.
+  function aplicarCorrecaoGrupo(parcelas, dataAssinatura){
     let valorAnterior = null;
+    let dataAnterior = dataAssinatura;
     parcelas.forEach(p => {
       const elegivel = p.indiceNoGrupo >= p.corrigirApartirDe;
       if(!elegivel){
@@ -1009,17 +1018,20 @@
         p.corrTotal = 0;
         p.valorFinal = p.valorOriginal;
         valorAnterior = p.valorFinal;
+        dataAnterior = p.data;
         return;
       }
       const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
+      const meses = Math.max(0, monthDiff(dataAnterior, p.data));
       const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
-      const corrIndice = base * taxaIndice * (p.passoMeses || 1);
-      const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100) * (p.passoMeses || 1);
+      const corrIndice = base * taxaIndice * meses;
+      const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100) * meses;
       p.jurosSpread = jurosSpread;
       p.corrIndice = corrIndice;
       p.corrTotal = jurosSpread + corrIndice;
       p.valorFinal = base + p.corrTotal;
       valorAnterior = p.valorFinal;
+      dataAnterior = p.data;
     });
     return parcelas;
   }
@@ -1118,7 +1130,7 @@
       const dataStr = document.getElementById('inpEntradaAvistaData').value;
       const data = dataStr ? parseDateInput(dataStr) : dataAssinatura;
       const valor = getMoneyValue(document.getElementById('inpEntradaAvistaValor'));
-      parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1, passoMeses: 1 });
+      parcelas.push({ data, valorOriginal: valor, indiceNoGrupo: 1 });
     } else {
       const qtd = Math.max(1, parseInt(document.getElementById('inpEntradaQtd').value,10) || 1);
       const dataStr = document.getElementById('inpEntradaData').value;
@@ -1138,7 +1150,7 @@
         setMoneyValue(document.getElementById('inpEntradaValorTotal'), valores.reduce((a,b) => a+b, 0));
       }
       for(let i=0;i<qtd;i++){
-        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i], indiceNoGrupo: i+1, passoMeses: 1 });
+        parcelas.push({ data: addMonths(dataInicial, i), valorOriginal: valores[i], indiceNoGrupo: i+1 });
       }
     }
 
@@ -1198,8 +1210,7 @@
         valorOriginal: valores[i],
         jurosSpreadPct, indiceTipo, indicePct,
         indiceNoGrupo: i+1,
-        corrigirApartirDe,
-        passoMeses
+        corrigirApartirDe
       });
     }
     return parcelas;
@@ -1227,15 +1238,16 @@
 
   let ultimoCronograma = [];
 
-  function gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves){
-    // A correção por índice depende da parcela anterior do mesmo grupo, então é calculada
-    // sequencialmente dentro de cada grupo antes de mesclar e ordenar o cronograma completo.
-    aplicarCorrecaoGrupo(entrada);
-    aplicarCorrecaoGrupo(mensais);
-    aplicarCorrecaoGrupo(bimestrais);
-    aplicarCorrecaoGrupo(semestrais);
-    aplicarCorrecaoGrupo(anuais);
-    aplicarCorrecaoGrupo(chaves);
+  function gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves, dataAssinatura){
+    // A correção por índice depende da parcela anterior do mesmo grupo (ou da assinatura do
+    // contrato, na 1ª parcela), então é calculada sequencialmente dentro de cada grupo antes de
+    // mesclar e ordenar o cronograma completo.
+    aplicarCorrecaoGrupo(entrada, dataAssinatura);
+    aplicarCorrecaoGrupo(mensais, dataAssinatura);
+    aplicarCorrecaoGrupo(bimestrais, dataAssinatura);
+    aplicarCorrecaoGrupo(semestrais, dataAssinatura);
+    aplicarCorrecaoGrupo(anuais, dataAssinatura);
+    aplicarCorrecaoGrupo(chaves, dataAssinatura);
 
     const prioridade = { Entrada:0, Mensal:1, Bimestral:2, Semestral:3, Anual:4, Chaves:5 };
     const todas = [...entrada, ...mensais, ...bimestrais, ...semestrais, ...anuais, ...chaves];
@@ -1378,7 +1390,7 @@
     const semestrais = calcularSemestrais(dataAssinatura);
     const anuais = calcularAnuais(dataAssinatura);
     const chaves = calcularChaves(dataAssinatura);
-    const todas = gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves);
+    const todas = gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves, dataAssinatura);
     atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais, chaves);
   }
 
