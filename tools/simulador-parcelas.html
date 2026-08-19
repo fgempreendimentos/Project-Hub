@@ -200,6 +200,7 @@
   .tag-entrada{ background:#e3f0f1; color:var(--primary); }
   .tag-mensal{ background:#eafaf0; color:var(--success); }
   .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
+  .tag-trimestral{ background:#fce7f3; color:#db2777; }
   .tag-semestral{ background:#fef3e2; color:var(--warning); }
   .tag-anual{ background:#fdecec; color:var(--danger); }
   .tag-chaves{ background:#dbeafe; color:#2563eb; }
@@ -554,6 +555,82 @@
         </div>
       </div>
 
+      <!-- Parcelas Trimestrais -->
+      <div class="card" id="cardTrimestrais">
+        <div class="card-head">
+          <h2><span class="icon">📆</span> Parcelas Trimestrais</h2>
+          <label class="check-opt"><input type="checkbox" id="chkTrimestraisHabilitado"> Habilitar</label>
+        </div>
+        <div class="card-body">
+          <fieldset id="trimestraisFieldset" disabled>
+            <div class="field-row">
+              <div class="field">
+                <label for="selTrimestraisModo">Definir por</label>
+                <select id="selTrimestraisModo">
+                  <option value="qtd_total">Quantidade + valor total</option>
+                  <option value="qtd_parcela">Quantidade + valor da parcela</option>
+                  <option value="total_parcela">Valor total + valor da parcela</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpTrimestraisData">1º vencimento</label>
+                <input type="date" id="inpTrimestraisData">
+              </div>
+              <div class="field">
+                <label>Periodicidade</label>
+                <input type="text" value="Trimestral (3 em 3 meses)" disabled>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field" id="trimestraisQtdWrap">
+                <label for="inpTrimestraisQtd">Quantidade de parcelas</label>
+                <input type="number" min="1" step="1" id="inpTrimestraisQtd" value="4">
+              </div>
+              <div class="field" id="trimestraisTotalWrap">
+                <label for="inpTrimestraisValorTotal">Valor total destinado às trimestrais</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpTrimestraisValorTotal" value="0,00">
+                </div>
+              </div>
+              <div class="field" id="trimestraisParcelaWrap" style="display:none;">
+                <label for="inpTrimestraisValorParcela">Valor de cada parcela</label>
+                <div class="money-field"><span class="prefix">R$</span>
+                  <input type="text" inputmode="numeric" class="money-input" id="inpTrimestraisValorParcela" value="0,00">
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="section-label">Correção das trimestrais</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="inpJurosTrimestrais">Juros/Spread (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpJurosTrimestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="selIndiceTrimestrais">Índice</label>
+                <select id="selIndiceTrimestrais">
+                  <option value="nenhum">Sem índice</option>
+                  <option value="igpm">IGP-M</option>
+                  <option value="incc">INCC</option>
+                  <option value="ipca">IPCA</option>
+                  <option value="inpc">INPC</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="inpIndicePctTrimestrais">Percentual do índice (a.m.)</label>
+                <div class="pct-field"><input type="text" inputmode="decimal" class="pct-input" id="inpIndicePctTrimestrais" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <label for="inpTrimestraisCorrigirDe">Corrigir a partir da parcela nº</label>
+                <input type="number" min="1" step="1" id="inpTrimestraisCorrigirDe" value="1">
+                <p class="hint">Padrão: 1 (corrige desde a 1ª parcela trimestral).</p>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
       <!-- Parcelas Semestrais -->
       <div class="card" id="cardSemestrais">
         <div class="card-head">
@@ -795,6 +872,7 @@
             <div class="resumo-row"><span class="lbl">Entrada</span><span class="val" id="resEntrada">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Mensais</span><span class="val" id="resMensais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Bimestrais</span><span class="val" id="resBimestrais">R$ 0,00</span></div>
+            <div class="resumo-row"><span class="lbl">Trimestrais</span><span class="val" id="resTrimestrais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Semestrais</span><span class="val" id="resSemestrais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Anuais</span><span class="val" id="resAnuais">R$ 0,00</span></div>
             <div class="resumo-row"><span class="lbl">Chaves</span><span class="val" id="resChaves">R$ 0,00</span></div>
@@ -1080,6 +1158,7 @@
 
     atualizarVisibilidadeGrupoPeriodico('Mensais');
     atualizarVisibilidadeGrupoPeriodico('Bimestrais');
+    atualizarVisibilidadeGrupoPeriodico('Trimestrais');
     atualizarVisibilidadeGrupoPeriodico('Semestrais');
     atualizarVisibilidadeGrupoPeriodico('Anuais');
     atualizarVisibilidadeGrupoPeriodico('Chaves');
@@ -1222,6 +1301,9 @@
   function calcularBimestrais(dataAssinatura){
     return calcularGrupoPeriodico('Bimestrais', 'Bimestral', 2, dataAssinatura);
   }
+  function calcularTrimestrais(dataAssinatura){
+    return calcularGrupoPeriodico('Trimestrais', 'Trimestral', 3, dataAssinatura);
+  }
   function calcularSemestrais(dataAssinatura){
     return calcularGrupoPeriodico('Semestrais', 'Semestral', 6, dataAssinatura);
   }
@@ -1238,19 +1320,20 @@
 
   let ultimoCronograma = [];
 
-  function gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves, dataAssinatura){
+  function gerarTabela(entrada, mensais, bimestrais, trimestrais, semestrais, anuais, chaves, dataAssinatura){
     // A correção por índice depende da parcela anterior do mesmo grupo (ou da assinatura do
     // contrato, na 1ª parcela), então é calculada sequencialmente dentro de cada grupo antes de
     // mesclar e ordenar o cronograma completo.
     aplicarCorrecaoGrupo(entrada, dataAssinatura);
     aplicarCorrecaoGrupo(mensais, dataAssinatura);
     aplicarCorrecaoGrupo(bimestrais, dataAssinatura);
+    aplicarCorrecaoGrupo(trimestrais, dataAssinatura);
     aplicarCorrecaoGrupo(semestrais, dataAssinatura);
     aplicarCorrecaoGrupo(anuais, dataAssinatura);
     aplicarCorrecaoGrupo(chaves, dataAssinatura);
 
-    const prioridade = { Entrada:0, Mensal:1, Bimestral:2, Semestral:3, Anual:4, Chaves:5 };
-    const todas = [...entrada, ...mensais, ...bimestrais, ...semestrais, ...anuais, ...chaves];
+    const prioridade = { Entrada:0, Mensal:1, Bimestral:2, Trimestral:3, Semestral:4, Anual:5, Chaves:6 };
+    const todas = [...entrada, ...mensais, ...bimestrais, ...trimestrais, ...semestrais, ...anuais, ...chaves];
     todas.sort((a,b) => a.data - b.data || prioridade[a.tipo]-prioridade[b.tipo]);
 
     let saldo = 0;
@@ -1264,7 +1347,7 @@
     return todas;
   }
 
-  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Bimestral:'tag-bimestral', Semestral:'tag-semestral', Anual:'tag-anual', Chaves:'tag-chaves' };
+  const tagClass = { Entrada:'tag-entrada', Mensal:'tag-mensal', Bimestral:'tag-bimestral', Trimestral:'tag-trimestral', Semestral:'tag-semestral', Anual:'tag-anual', Chaves:'tag-chaves' };
 
   // Se todas as parcelas com índice ativo usam o mesmo índice, o cabeçalho da coluna mostra o
   // nome desse índice (ex.: "Correção IGP-M"); caso contrário, mantém o rótulo genérico.
@@ -1324,19 +1407,20 @@
    *  ATUALIZAÇÃO DO RESUMO FINANCEIRO
    * ========================================================= */
 
-  function atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais, chaves){
+  function atualizarResumo(todas, entrada, mensais, bimestrais, trimestrais, semestrais, anuais, chaves){
     const contratoTotal = getMoneyValue(document.getElementById('inpContratoTotal'));
     const somaGrupo = (arr) => arr.reduce((acc,p) => acc + p.valorOriginal, 0);
 
     const entradaNominal = somaGrupo(entrada);
     const mensaisNominal = somaGrupo(mensais);
     const bimestraisNominal = somaGrupo(bimestrais);
+    const trimestraisNominal = somaGrupo(trimestrais);
     const semestraisNominal = somaGrupo(semestrais);
     const anuaisNominal = somaGrupo(anuais);
     const chavesNominal = somaGrupo(chaves);
-    const totalNominal = entradaNominal + mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal + chavesNominal;
+    const totalNominal = entradaNominal + mensaisNominal + bimestraisNominal + trimestraisNominal + semestraisNominal + anuaisNominal + chavesNominal;
     const financiado = contratoTotal - entradaNominal;
-    const somaParcelas = mensaisNominal + bimestraisNominal + semestraisNominal + anuaisNominal + chavesNominal;
+    const somaParcelas = mensaisNominal + bimestraisNominal + trimestraisNominal + semestraisNominal + anuaisNominal + chavesNominal;
     const diferenca = contratoTotal - totalNominal;
 
     const totalCorrigido = todas.reduce((acc,p) => acc + p.valorFinal, 0);
@@ -1356,6 +1440,7 @@
     document.getElementById('resEntrada').textContent = formatMoneyBRL(entradaNominal);
     document.getElementById('resMensais').textContent = formatMoneyBRL(mensaisNominal);
     document.getElementById('resBimestrais').textContent = formatMoneyBRL(bimestraisNominal);
+    document.getElementById('resTrimestrais').textContent = formatMoneyBRL(trimestraisNominal);
     document.getElementById('resSemestrais').textContent = formatMoneyBRL(semestraisNominal);
     document.getElementById('resAnuais').textContent = formatMoneyBRL(anuaisNominal);
     document.getElementById('resChaves').textContent = formatMoneyBRL(chavesNominal);
@@ -1387,11 +1472,12 @@
     const entrada = calcularEntrada(dataAssinatura);
     const mensais = calcularMensais(dataAssinatura);
     const bimestrais = calcularBimestrais(dataAssinatura);
+    const trimestrais = calcularTrimestrais(dataAssinatura);
     const semestrais = calcularSemestrais(dataAssinatura);
     const anuais = calcularAnuais(dataAssinatura);
     const chaves = calcularChaves(dataAssinatura);
-    const todas = gerarTabela(entrada, mensais, bimestrais, semestrais, anuais, chaves, dataAssinatura);
-    atualizarResumo(todas, entrada, mensais, bimestrais, semestrais, anuais, chaves);
+    const todas = gerarTabela(entrada, mensais, bimestrais, trimestrais, semestrais, anuais, chaves, dataAssinatura);
+    atualizarResumo(todas, entrada, mensais, bimestrais, trimestrais, semestrais, anuais, chaves);
   }
 
   document.getElementById('formArea').addEventListener('input', recalcularTudo);
@@ -1440,6 +1526,17 @@
     document.getElementById('selIndiceBimestrais').value = 'nenhum';
     document.getElementById('inpIndicePctBimestrais').value = 0;
     document.getElementById('inpBimestraisCorrigirDe').value = 1;
+
+    document.getElementById('chkTrimestraisHabilitado').checked = false;
+    document.getElementById('selTrimestraisModo').value = 'qtd_total';
+    document.getElementById('inpTrimestraisData').value = toISODate(addMonths(hoje,3));
+    document.getElementById('inpTrimestraisQtd').value = 4;
+    setMoneyValue(document.getElementById('inpTrimestraisValorTotal'), 0);
+    setMoneyValue(document.getElementById('inpTrimestraisValorParcela'), 0);
+    document.getElementById('inpJurosTrimestrais').value = 0;
+    document.getElementById('selIndiceTrimestrais').value = 'nenhum';
+    document.getElementById('inpIndicePctTrimestrais').value = 0;
+    document.getElementById('inpTrimestraisCorrigirDe').value = 1;
 
     document.getElementById('chkSemestraisHabilitado').checked = false;
     document.getElementById('selSemestraisModo').value = 'qtd_total';
@@ -1555,6 +1652,7 @@
         .tag-entrada{ background:#e3f0f1; color:#0f5b66; }
         .tag-mensal{ background:#eafaf0; color:#16a34a; }
         .tag-bimestral{ background:#f0edfb; color:#6b46c1; }
+        .tag-trimestral{ background:#fce7f3; color:#db2777; }
         .tag-semestral{ background:#fef3e2; color:#b45309; }
         .tag-anual{ background:#fdecec; color:#dc2626; }
         .tag-chaves{ background:#dbeafe; color:#2563eb; }
