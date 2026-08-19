@@ -1073,16 +1073,18 @@
     return (para.getFullYear()-de.getFullYear())*12 + (para.getMonth()-de.getMonth());
   }
 
-  // Aplica a correção a cada parcela de um grupo (entrada, mensal, bimestral, semestral, anual
-  // ou chaves), em sequência, corrigindo sempre desde o momento da venda (assinatura do
-  // contrato) ou da última referência do próprio grupo:
-  // - Correção do índice = valor da parcela anterior (já corrigida) x taxa do índice escolhido x
-  //   nº de meses realmente decorridos desde a referência anterior (assinatura do contrato, na
-  //   1ª parcela do grupo, ou o vencimento da parcela anterior do mesmo grupo).
-  // - Juros/Spread = valor inicial da própria parcela x taxa de juros/spread informada x mesmo
-  //   nº de meses decorridos, pela mesma razão (taxa mensal aplicada ao período todo).
-  // - Valor final da parcela = valor da parcela anterior + correção do índice + juros/spread.
-  // A 1ª parcela elegível usa o próprio valor original como "parcela anterior". Parcelas fora da
+  // Aplica a correção a cada parcela de um grupo (entrada, mensal, bimestral, trimestral,
+  // semestral, anual ou chaves), em sequência, corrigindo sempre desde o momento da venda
+  // (assinatura do contrato) ou da última referência do próprio grupo, mês a mês:
+  // - A cada mês decorrido (nº real de meses entre a referência anterior e o vencimento da
+  //   parcela — assinatura do contrato, na 1ª parcela do grupo, ou o vencimento da parcela
+  //   anterior do mesmo grupo), a correção do índice incide sobre o saldo já corrigido até
+  //   aquele mês (juros compostos), e o Juros/Spread incide sobre o valor original da parcela.
+  // - O saldo cresce mês a mês (saldo += juros do mês + índice do mês); apenas o resultado após
+  //   todos os meses decorridos é exibido no cronograma — os meses intermediários não geram
+  //   linhas próprias.
+  // - Valor final da parcela = saldo após os meses decorridos.
+  // A 1ª parcela elegível usa o próprio valor original como saldo inicial. Parcelas fora da
   // faixa de correção ("corrigir a partir da parcela nº") também avançam a referência de data,
   // para que a correção não retroaja quando o reajuste começa mais adiante no grupo.
   function aplicarCorrecaoGrupo(parcelas, dataAssinatura){
@@ -1102,12 +1104,27 @@
       const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
       const meses = Math.max(0, monthDiff(dataAnterior, p.data));
       const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
-      const corrIndice = base * taxaIndice * meses;
-      const jurosSpread = p.valorOriginal * (p.jurosSpreadPct/100) * meses;
+      const taxaJuros = (p.jurosSpreadPct||0)/100;
+
+      // Reajuste mês a mês: a cada mês decorrido, a correção do índice incide sobre o saldo já
+      // corrigido até ali (juros compostos), enquanto o Juros/Spread continua incidindo sobre o
+      // valor original da parcela. Só o resultado final (após todos os meses) é exibido — os
+      // meses intermediários não geram linhas próprias no cronograma.
+      let saldo = base;
+      let jurosSpread = 0;
+      let corrIndice = 0;
+      for(let m=0; m<meses; m++){
+        const jurosMes = p.valorOriginal * taxaJuros;
+        const indiceMes = saldo * taxaIndice;
+        saldo += jurosMes + indiceMes;
+        jurosSpread += jurosMes;
+        corrIndice += indiceMes;
+      }
+
       p.jurosSpread = jurosSpread;
       p.corrIndice = corrIndice;
       p.corrTotal = jurosSpread + corrIndice;
-      p.valorFinal = base + p.corrTotal;
+      p.valorFinal = saldo;
       valorAnterior = p.valorFinal;
       dataAnterior = p.data;
     });
@@ -1119,11 +1136,15 @@
    * ========================================================= */
 
   // Mostra/esconde os campos de quantidade/valor total/valor por parcela conforme o modo escolhido,
-  // e habilita/desabilita o fieldset do grupo periódico (mensal, bimestral, semestral ou anual).
+  // habilita/desabilita o fieldset do grupo periódico (mensal, bimestral, trimestral, semestral,
+  // anual ou chaves) e minimiza o card inteiro (some o corpo, mantém só o cabeçalho com o
+  // "Habilitar") enquanto o grupo estiver desabilitado.
   function atualizarVisibilidadeGrupoPeriodico(prefixo){
     const idPrefix = prefixo.charAt(0).toLowerCase() + prefixo.slice(1);
     const habilitado = document.getElementById(`chk${prefixo}Habilitado`).checked;
     document.getElementById(`${idPrefix}Fieldset`).disabled = !habilitado;
+    const cardBody = document.querySelector(`#card${prefixo} .card-body`);
+    if(cardBody) cardBody.style.display = habilitado ? '' : 'none';
     const modo = document.getElementById(`sel${prefixo}Modo`).value;
     document.getElementById(`${idPrefix}QtdWrap`).style.display = modo.startsWith('qtd') ? '' : 'none';
     document.getElementById(`${idPrefix}TotalWrap`).style.display = (modo==='qtd_total'||modo==='total_parcela') ? '' : 'none';
@@ -1435,7 +1456,14 @@
     outDif.textContent = formatMoneyBRL(diferenca);
     outDif.className = 'v ' + (Math.abs(diferenca) < 0.005 ? 'ok' : 'bad');
 
-    // Card lateral de resumo
+    // Card lateral de resumo. Linhas de grupos opcionais (com "Habilitar") só aparecem quando o
+    // grupo está habilitado e realmente tem valor — evita poluir o resumo com tipos zerados.
+    const exibirLinhaGrupo = (idValor, prefixoChk, nominal) => {
+      const row = document.getElementById(idValor).closest('.resumo-row');
+      const habilitado = document.getElementById(`chk${prefixoChk}Habilitado`).checked;
+      if(row) row.style.display = (habilitado && nominal > 0.004) ? '' : 'none';
+    };
+
     document.getElementById('resValorContrato').textContent = formatMoneyBRL(contratoTotal);
     document.getElementById('resEntrada').textContent = formatMoneyBRL(entradaNominal);
     document.getElementById('resMensais').textContent = formatMoneyBRL(mensaisNominal);
@@ -1445,6 +1473,13 @@
     document.getElementById('resAnuais').textContent = formatMoneyBRL(anuaisNominal);
     document.getElementById('resChaves').textContent = formatMoneyBRL(chavesNominal);
     document.getElementById('resFinanciado').textContent = formatMoneyBRL(financiado);
+
+    exibirLinhaGrupo('resMensais', 'Mensais', mensaisNominal);
+    exibirLinhaGrupo('resBimestrais', 'Bimestrais', bimestraisNominal);
+    exibirLinhaGrupo('resTrimestrais', 'Trimestrais', trimestraisNominal);
+    exibirLinhaGrupo('resSemestrais', 'Semestrais', semestraisNominal);
+    exibirLinhaGrupo('resAnuais', 'Anuais', anuaisNominal);
+    exibirLinhaGrupo('resChaves', 'Chaves', chavesNominal);
     document.getElementById('resCorrecoes').textContent = formatMoneyBRL(totalCorrecoes);
     document.getElementById('resTotalCorrigido').textContent = formatMoneyBRL(totalCorrigido);
     const resDif = document.getElementById('resDiferenca');
