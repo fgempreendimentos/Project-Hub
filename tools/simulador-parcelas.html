@@ -1089,6 +1089,7 @@
   // para que a correção não retroaja quando o reajuste começa mais adiante no grupo.
   function aplicarCorrecaoGrupo(parcelas, dataAssinatura){
     let valorAnterior = null;
+    let valorOriginalAnterior = null;
     let dataAnterior = dataAssinatura;
     parcelas.forEach(p => {
       const elegivel = p.indiceNoGrupo >= p.corrigirApartirDe;
@@ -1098,10 +1099,18 @@
         p.corrTotal = 0;
         p.valorFinal = p.valorOriginal;
         valorAnterior = p.valorFinal;
+        valorOriginalAnterior = p.valorOriginal;
         dataAnterior = p.data;
         return;
       }
-      const base = valorAnterior === null ? p.valorOriginal : valorAnterior;
+      // Quando todas as parcelas do grupo têm o mesmo valor original (caso comum), a base é
+      // simplesmente o valor final já corrigido da parcela anterior. Quando os valores diferem
+      // entre parcelas do mesmo grupo (ex.: entrada com "valores diferentes por parcela"), soma-se
+      // também a diferença entre o valor original desta parcela e o da anterior — sem isso, o
+      // valor próprio desta parcela seria descartado e substituído pelo da parcela anterior.
+      const base = valorAnterior === null
+        ? p.valorOriginal
+        : valorAnterior + (p.valorOriginal - valorOriginalAnterior);
       const meses = Math.max(0, monthDiff(dataAnterior, p.data));
       const taxaIndice = p.indiceTipo === 'nenhum' ? 0 : (p.indicePct||0)/100;
       const taxaJuros = (p.jurosSpreadPct||0)/100;
@@ -1126,6 +1135,7 @@
       p.corrTotal = jurosSpread + corrIndice;
       p.valorFinal = saldo;
       valorAnterior = p.valorFinal;
+      valorOriginalAnterior = p.valorOriginal;
       dataAnterior = p.data;
     });
     return parcelas;
