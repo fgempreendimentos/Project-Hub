@@ -1630,12 +1630,47 @@
     document.getElementById('inpIndicePctChaves').value = 0;
     document.getElementById('inpChavesCorrigirDe').value = 1;
 
+    Object.keys(CAMPOS_DATA_AUTO).forEach(id => { delete document.getElementById(id).dataset.auto; });
+
     recalcularTudo();
   }
 
   document.getElementById('btnNovo').addEventListener('click', valoresPadrao);
   document.getElementById('btnLimpar').addEventListener('click', () => {
     if(confirm('Limpar todos os dados da simulação atual?')) valoresPadrao();
+  });
+
+  /* =========================================================
+   *  SINCRONIZAÇÃO DOS VENCIMENTOS COM A DATA DE ASSINATURA
+   * ========================================================= */
+
+  // Os campos de "1º vencimento" de cada grupo nascem com uma data padrão calculada a partir de
+  // hoje (ex.: Anuais = hoje + 12 meses). Se o corretor só ajustar a "Data da assinatura do
+  // contrato" depois, sem tocar nesses campos, eles ficavam presos à data de hoje — fazendo o
+  // número de meses decorridos desde a venda (usado na correção) sair errado (ex.: uma parcela
+  // anual corrigindo como se fosse só 1 mês). Cada campo permanece "automático" (acompanha a
+  // assinatura) até o corretor editá-lo manualmente; a partir daí, fica independente.
+  const CAMPOS_DATA_AUTO = {
+    inpEntradaAvistaData: 0,
+    inpEntradaData: 0,
+    inpMensaisData: 1,
+    inpBimestraisData: 2,
+    inpTrimestraisData: 3,
+    inpSemestraisData: 6,
+    inpAnuaisData: 12,
+    inpChavesData: 24
+  };
+
+  Object.keys(CAMPOS_DATA_AUTO).forEach(id => {
+    document.getElementById(id).addEventListener('input', function(){ this.dataset.auto = 'false'; });
+  });
+
+  document.getElementById('inpContratoData').addEventListener('change', () => {
+    const novaData = parseDateInput(document.getElementById('inpContratoData').value);
+    Object.entries(CAMPOS_DATA_AUTO).forEach(([id, offsetMeses]) => {
+      const el = document.getElementById(id);
+      if(el.dataset.auto !== 'false') el.value = toISODate(addMonths(novaData, offsetMeses));
+    });
   });
 
   /* =========================================================
